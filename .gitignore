@@ -1,0 +1,24 @@
+#PKI / cryptography
+*.key
+*.csr
+*.crt
+*.pem
+*.srl
+ca/
+certs/
+
+# python
+__pycache__/
+*.pyc 
+venv/
+.env
+
+#React / Node
+ node_modules/
+ build/
+ dist/
+
+# IDEs
+.DS_Store
+.vscode/
+.idea/hi
