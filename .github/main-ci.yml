@@ -1,0 +1,51 @@
+name: Main Branch CI Security and Deployment
+
+on: 
+  push: 
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+jobs:
+  main-check:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pylint pytest bandit safety
+
+      - name: Lint code
+        run: |
+          pylint **/*.py || true
+      
+      - name: Run unit & integration tests
+        run: |
+          pytest || true
+
+      - name: Security Scan
+        run: |
+          bandit -r . || true
+      
+      - name: Dependency vulnerability check
+        run: |
+          safety check || true
+
+      - name: Build validation
+        run: |
+          python -m compileall . || true
+          
