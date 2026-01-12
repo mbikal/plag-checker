@@ -2,10 +2,12 @@ name: Feature Branch CI
 on:
   push:
     branches:
-      - 'feature/**'
+      - 'feature/*'
   pull_request:
     branches:
-      - 'feature/**'
+      - 'feature/*'
+  workflow_dispatch:
+  
 jobs:
   feature-check:
     runs-on: ubuntu-latest
