@@ -11,10 +11,11 @@ import os
 app = Flask(__name__)
 
 USERS_FILE = 'users.json'
-BASE_DIR = os.path.dirname(os.path.abspath(__file__), "..")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CA_DIR = os.path.join(BASE_DIR, "ca/")
 cert_dir = os.path.join(BASE_DIR, "certs/")
 os.makedirs(cert_dir, exist_ok=True)
+
 # load existing users
 if os.path.exists(USERS_FILE):
     with open(USERS_FILE, 'r') as f:
