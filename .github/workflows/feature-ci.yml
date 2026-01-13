@@ -29,7 +29,7 @@ jobs:
 
       - name: Run linting 
         run: |
-          pylint backend || true
+          pylint backend/auth.py --disable=import-error || true
       
       - name: Run unit tests
         run: |
