@@ -1,12 +1,18 @@
-from flask import Flask, request, jsonify
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from datetime import datetime, timedelta
-import bcrypt
+"""
+Authentication module for plagiagrism checker application.
+Handles user registration, login, and certificate generation.
+"""
+
 import json
 import os
+from datetime import datetime, timedelta
+
+import bcrypt
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
@@ -18,6 +24,7 @@ os.makedirs(cert_dir, exist_ok=True)
 
 # load existing users
 def load_users():
+    """Load existing users from the JSON file."""
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'r', encoding='utf-8') as file_handle:
             return json.load(file_handle)
@@ -34,6 +41,15 @@ with open(os.path.join(CA_DIR, 'ca.crt'), 'rb') as f_cert:
 
 #--------- ceritificate generation ---------
 def generate_certificate(username, role):
+    """
+    Generate a certificate for a user.
+
+    Args:
+        username: The username for the certificate
+        role: The role of the user (e.g., student, teacher)
+    returns: 
+        str: Path to the generated certificate file
+    """
     user_key = rsa.generate_private_key(
         publicexponent=65537,
         key_size=2048,
@@ -78,6 +94,12 @@ def generate_certificate(username, role):
 #--------- user registration ---------
 @app.route('/signup', methods=['POST'])
 def signup():
+    """
+    Handle user registration.
+
+    Returns:
+        JSON reponse indicating success or failure.
+    """
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -103,6 +125,13 @@ def signup():
 #--------- user login ---------
 @app.route('/login', methods=['POST'])
 def login():
+    """
+    Handle user login and certificate generation.
+
+    Returns:
+        JSON response with user role and certificate path on success,
+        or error message on failure.
+    """
     data = request.json
     username = data.get('username')
     password = data.get('password')
