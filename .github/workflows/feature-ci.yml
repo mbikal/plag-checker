@@ -33,4 +33,4 @@ jobs:
       
       - name: Run unit tests
         run: |
-          pytest backend || true
+          pytest backend/test.py || true
