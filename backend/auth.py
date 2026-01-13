@@ -17,20 +17,20 @@ cert_dir = os.path.join(BASE_DIR, "certs/")
 os.makedirs(cert_dir, exist_ok=True)
 
 # load existing users
-if os.path.exists(USERS_FILE):
-    with open(USERS_FILE, 'r') as f:
-        users = json.load(f)
-else:
-    users = {}
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'r', encoding='utf-8') as file_handle:
+            return json.load(file_handle)
+    return {}
+
+users = load_users()
 
 # load CA private key and certificate
-with open(os.path.join(CA_DIR, 'ca.key'), 'rb') as f:
-    ca_key = serialization.load_pem_private_key(f.read(), None)
+with open(os.path.join(CA_DIR, 'ca.key'), 'rb') as f_key:
+    ca_key = serialization.load_pem_private_key(f_key.read(), None)
 
-with open(os.path.join(CA_DIR, 'ca.crt'), 'rb') as f:
-    ca_cert = x509.load_pem_x509_certificate(f.read())
-
-os.makedirs(CA_DIR, exist_ok=True)
+with open(os.path.join(CA_DIR, 'ca.crt'), 'rb') as f_cert:
+    ca_cert = x509.load_pem_x509_certificate(f_cert.read())
 
 #--------- ceritificate generation ---------
 def generate_certificate(username, role):
@@ -58,9 +58,9 @@ def generate_certificate(username, role):
             .sign(ca_key, hashes.SHA256())
         ])
     )
-    cert_path = f"{cert_dir}/{username}.crt"
-    key_path = f"{cert_dir}/{username}.key"
-    
+    cert_path = os.path.join(cert_dir, f"{username}.crt")
+    key_path = os.path.join(cert_dir, f"{username}.key")
+
     with open(cert_path, "wb") as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
     
