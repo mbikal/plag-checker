@@ -75,10 +75,10 @@ def generate_certificate(username, role):
     cert_path = os.path.join(cert_dir, f"{username}.crt")
     key_path = os.path.join(cert_dir, f"{username}.key")
 
-    with open(cert_path, "wb", encoding='utf-8') as f:
+    with open(cert_path, "wb") as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-    with open(key_path, "wb", encoding='utf-8') as f:
+    with open(key_path, "wb") as f:
         f.write(
             user_key.private_bytes(
                 serialization.Encoding.PEM,
