@@ -1,0 +1,13 @@
+#Bandit configuration file
+
+exclude: /test, */test.py, */tests.py
+
+skips: B101
+
+#only report issues with medium or high confidence
+
+confidence: MEDIUM
+
+#Only report issues with medium or high severity
+severity: MEDIUM
+
