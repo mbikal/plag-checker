@@ -5,11 +5,10 @@ import json
 import os
 import sys
 import tempfile
+import pytest
 
 # Add parent directory to path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-import pytest
 
 # pylint: disable=wrong-import-position,import-error
 from backend.auth import app, load_users, generate_certificate
@@ -74,7 +73,7 @@ class TestLoadUsers:
 class TestSignup:
     """Tests for the signup endpoint."""
 
-    def test_signup_success(self, test_client, users_file):
+    def test_signup_success(self, test_client, users_file):  # pylint: disable=unused-argument
         """Test successful user registration."""
         response = test_client.post('/signup', json={
             'username': 'newuser',
@@ -103,7 +102,7 @@ class TestSignup:
         data = json.loads(response.data)
         assert 'error' in data
 
-    def test_signup_duplicate_username(self, test_client, users_file):
+    def test_signup_duplicate_username(self, test_client, users_file):  # pylint: disable=unused-argument
         """Test signup with duplicate username."""
         # First signup
         test_client.post('/signup', json={
@@ -125,7 +124,7 @@ class TestLogin:
     """Tests for the login endpoint."""
 
     @pytest.fixture(name='user')
-    def fixture_registered_user(self, test_client, users_file):
+    def fixture_registered_user(self, test_client, users_file):  # pylint: disable=unused-argument
         """Create a registered user for login tests."""
         test_client.post('/signup', json={
             'username': 'testuser',
