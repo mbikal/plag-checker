@@ -206,3 +206,4 @@ class TestGenerateCertificate:
             os.remove(cert_path)
         if os.path.exists(key_path):
             os.remove(key_path)
+            
