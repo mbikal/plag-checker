@@ -58,7 +58,7 @@ jobs:
           # Run on all backend files except tests, skip B101 (assert_used) for test files
           bandit -r backend/ -ll -f json -o bandit-report.json --exclude backend/test.py || true
           echo "Bandit results:"
-          bandit -r .bandit -ll --exclude backend/test.py
+          bandit -r backend/ -ll --exclude backend/test.py
         continue-on-error: false
       
       - name: Check for known security vulnerabilities
