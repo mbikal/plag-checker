@@ -33,7 +33,10 @@ def load_users():
     """Load existing users from the users file."""
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'r', encoding='utf-8') as file_handle:
-            return json.load(file_handle)
+            try:
+                return json.load(file_handle)
+            except json.JSONDecodeError:
+                return {}
     return {}
 
 
