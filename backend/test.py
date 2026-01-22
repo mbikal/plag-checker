@@ -102,6 +102,13 @@ class TestSignup:
         data = json.loads(response.data)
         assert 'error' in data
 
+    def test_signup_requires_json(self, test_client):
+        """Test signup with non-JSON body."""
+        response = test_client.post('/signup', data='username=testuser')
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
+
     def test_signup_duplicate_username(self, test_client, users_file):  # pylint: disable=unused-argument
         """Test signup with duplicate username."""
         # First signup
@@ -164,6 +171,32 @@ class TestLogin:
         assert response.status_code == 401
         data = json.loads(response.data)
         assert 'Invalid username or password' in data['error']
+
+    def test_login_requires_json(self, test_client):
+        """Test login with non-JSON body."""
+        response = test_client.post('/login', data='username=testuser')
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
+
+
+class TestCors:
+    """Tests for CORS headers."""
+
+    def test_cors_headers_present(self, test_client):
+        """CORS headers should be present on API responses."""
+        response = test_client.post('/signup', json={
+            'username': 'corsuser',
+            'password': 'password123',
+            'role': 'student'
+        })
+        assert response.headers.get('Access-Control-Allow-Origin') == '*'
+
+    def test_options_preflight(self, test_client):
+        """Preflight requests should include CORS headers."""
+        response = test_client.options('/signup')
+        assert response.status_code in (200, 204)
+        assert response.headers.get('Access-Control-Allow-Origin') == '*'
 
 
 class TestGenerateCertificate:
