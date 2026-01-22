@@ -14,8 +14,8 @@ from cryptography.x509.oid import NameOID
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-USERS_FILE = 'users.json'
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+USERS_FILE = os.path.join(BASE_DIR, 'users.json')
 CA_DIR = os.path.join(BASE_DIR, "ca/")
 cert_dir = os.path.join(BASE_DIR, "certs/")
 os.makedirs(cert_dir, exist_ok=True)
@@ -28,8 +28,6 @@ def load_users():
             return json.load(file_handle)
     return {}
 
-
-users = load_users()
 
 # load CA private key and certificate
 with open(os.path.join(CA_DIR, 'ca.key'), 'rb') as f_key:
@@ -98,7 +96,10 @@ def signup():
     Returns:
         JSON response with success message or error
     """
-    data = request.json
+    if not request.is_json:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    data = request.json or {}
     username = data.get('username')
     password = data.get('password')
     role = data.get('role', 'student')
@@ -106,6 +107,7 @@ def signup():
     if not username or not password:
         return jsonify({'error': 'Username and password are required'}), 400
 
+    users = load_users()
     if username in users:
         return jsonify({'error': 'Username already exists'}), 400
 
@@ -133,10 +135,17 @@ def login():
     Returns:
         JSON response with login status and certificate path
     """
-    data = request.json
+    if not request.is_json:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    data = request.json or {}
     username = data.get('username')
     password = data.get('password')
 
+    if not username or not password:
+        return jsonify({'error': 'Invalid username or password'}), 401
+
+    users = load_users()
     if username not in users:
         return jsonify({'error': 'Invalid username or password'}), 401
 
