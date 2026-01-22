@@ -21,6 +21,14 @@ cert_dir = os.path.join(BASE_DIR, "certs/")
 os.makedirs(cert_dir, exist_ok=True)
 
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+
 def load_users():
     """Load existing users from the users file."""
     if os.path.exists(USERS_FILE):
