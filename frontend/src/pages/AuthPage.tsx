@@ -45,7 +45,7 @@ function AuthPage() {
         localStorage.setItem('plagchecker.username', username)
         navigate(routes.upload)
       }
-    } catch (error) {
+    } catch {
       setResponse({ error: 'Unable to reach the server. Check API URL or backend status.' })
     } finally {
       setLoading(false)
