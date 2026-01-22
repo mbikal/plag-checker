@@ -3,4 +3,5 @@ requests
 cryptography
 bcrypt
 pytest
+pytest-cov
 pylint
