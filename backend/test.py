@@ -77,7 +77,7 @@ class TestSignup:
         """Test successful user registration."""
         response = test_client.post('/signup', json={
             'username': 'newuser',
-            'password': 'password123',
+            'password': 'Password123!',
             'role': 'student'
         })
         assert response.status_code == 201
@@ -114,13 +114,13 @@ class TestSignup:
         # First signup
         test_client.post('/signup', json={
             'username': 'duplicate',
-            'password': 'password123'
+            'password': 'Password123!'
         })
 
         # Second signup with same username
         response = test_client.post('/signup', json={
             'username': 'duplicate',
-            'password': 'password456'
+            'password': 'Password456!'
         })
         assert response.status_code == 400
         data = json.loads(response.data)
@@ -135,10 +135,10 @@ class TestLogin:
         """Create a registered user for login tests."""
         test_client.post('/signup', json={
             'username': 'testuser',
-            'password': 'testpass123',
+            'password': 'Testpass123!',
             'role': 'student'
         })
-        return {'username': 'testuser', 'password': 'testpass123'}
+        return {'username': 'testuser', 'password': 'Testpass123!'}
 
     def test_login_success(self, test_client, user):
         """Test successful login."""
