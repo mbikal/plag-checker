@@ -2,5 +2,9 @@
     "bikal": {
         "password": "$2b$12$LzrXPJff5IVlTjwSBdhrNuJAbGhQKjgLCmpTCjGlePUczzFM3iRQ2",
         "role": "student"
+    },
+    "bikal1": {
+        "password": "$2b$12$9AerUxXF2Wr58pGjO0d2cOrCi1zuPVpsBcJeSHa/km5KDYEtWE0cy",
+        "role": "student"
     }
 }

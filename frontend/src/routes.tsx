@@ -4,6 +4,7 @@ export const routes = {
   home: '/',
   auth: '/auth',
   upload: '/upload',
+  report: '/report',
 } as const
 
 type RoutePath = typeof routes[keyof typeof routes]
@@ -20,6 +21,9 @@ const getRoute = (): RoutePath => {
   const path = normalizePath(window.location.hash)
   if (path === routes.upload) {
     return routes.upload
+  }
+  if (path === routes.report) {
+    return routes.report
   }
   if (path === routes.auth) {
     return routes.auth

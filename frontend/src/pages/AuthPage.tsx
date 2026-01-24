@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { navigate, routes } from '../routes'
 
@@ -19,6 +19,12 @@ function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<AuthResponse | null>(null)
 
+  useEffect(() => {
+    if (localStorage.getItem('plagchecker.session') === 'true') {
+      navigate(routes.upload)
+    }
+  }, [])
+
   const resetFeedback = () => setResponse(null)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -30,6 +36,33 @@ function AuthPage() {
       setResponse({ error: 'Passwords do not match.' })
       setLoading(false)
       return
+    }
+    if (mode === 'signup') {
+      if (password.length < 8) {
+        setResponse({ error: 'Password must be at least 8 characters long.' })
+        setLoading(false)
+        return
+      }
+      if (!/[A-Z]/.test(password)) {
+        setResponse({ error: 'Password must include an uppercase letter.' })
+        setLoading(false)
+        return
+      }
+      if (!/[a-z]/.test(password)) {
+        setResponse({ error: 'Password must include a lowercase letter.' })
+        setLoading(false)
+        return
+      }
+      if (!/\d/.test(password)) {
+        setResponse({ error: 'Password must include a number.' })
+        setLoading(false)
+        return
+      }
+      if (!/[^A-Za-z0-9]/.test(password)) {
+        setResponse({ error: 'Password must include a symbol.' })
+        setLoading(false)
+        return
+      }
     }
 
     const payload: Record<string, string> = { username, password }
@@ -43,6 +76,7 @@ function AuthPage() {
       setResponse(data)
       if (mode === 'login' && !data.error) {
         localStorage.setItem('plagchecker.username', username)
+        localStorage.setItem('plagchecker.session', 'true')
         navigate(routes.upload)
       }
     } catch {

@@ -3,12 +3,57 @@ import { navigate, routes } from '../routes'
 
 function UploadPage() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [report, setReport] = useState<Record<string, unknown> | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const username = useMemo(() => {
     return localStorage.getItem('plagchecker.username') || ''
   }, [])
   const handleLogout = () => {
     localStorage.removeItem('plagchecker.username')
+    localStorage.removeItem('plagchecker.session')
     navigate(routes.auth)
+  }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null
+    setSelectedFile(file)
+    setReport(null)
+    setError(null)
+  }
+
+  const handleScan = async () => {
+    if (!selectedFile) {
+      setError('Please select a file to scan.')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setReport(null)
+
+    try {
+      const apiBase = 'http://127.0.0.1:5000'
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      const res = await fetch(`${apiBase}/scan`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = (await res.json()) as Record<string, unknown>
+      if (!res.ok) {
+        setError((data.error as string) || 'Scan failed.')
+      } else {
+        setReport(data)
+        localStorage.setItem('plagchecker.report', JSON.stringify(data))
+        navigate(routes.report)
+      }
+    } catch {
+      setError('Unable to reach the server. Check API URL or backend status.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -61,11 +106,28 @@ function UploadPage() {
         <section className="panel">
           <div className="upload-box">
             <p className="upload-title">Upload a document</p>
-            <p className="upload-subtitle">PDF, DOCX, or TXT files supported for similarity checks.</p>
+            <p className="upload-subtitle">PDF files supported for similarity checks.</p>
             <label className="upload-button">
-              <input type="file" />
-              Select file
+              <input type="file" accept="application/pdf" onChange={handleFileChange} />
+              {selectedFile ? 'Change file' : 'Select file'}
             </label>
+            {selectedFile ? <p className="file-name">{selectedFile.name}</p> : null}
+            <button className="scan-button" type="button" onClick={handleScan} disabled={loading}>
+              {loading ? 'Scanning...' : 'Run scan'}
+            </button>
+            {error ? <p className="scan-error">{error}</p> : null}
+            {report ? (
+              <div className="report">
+                <p className="report-title">Scan report</p>
+                <pre>
+                  {JSON.stringify(
+                    { ...report, signature: undefined, public_key: undefined },
+                    null,
+                    2,
+                  )}
+                </pre>
+              </div>
+            ) : null}
           </div>
         </section>
       </main>

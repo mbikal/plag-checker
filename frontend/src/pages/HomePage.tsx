@@ -1,9 +1,15 @@
+import { useMemo } from 'react'
 import { navigate, routes } from '../routes'
 import reportImage from '../assets/report.svg'
 import scanImage from '../assets/scan.svg'
 import libraryImage from '../assets/library.svg'
 
 function HomePage() {
+  const isLoggedIn = useMemo(
+    () => localStorage.getItem('plagchecker.session') === 'true',
+    [],
+  )
+
   return (
     <div className="page">
       <div className="orb orb-one" aria-hidden="true" />
@@ -17,8 +23,12 @@ function HomePage() {
             <p className="brand-subtitle">Plagiarism detection with clear reporting</p>
           </div>
         </button>
-        <button className="ghost-button" type="button" onClick={() => navigate(routes.auth)}>
-          Sign in
+        <button
+          className="ghost-button"
+          type="button"
+          onClick={() => navigate(isLoggedIn ? routes.upload : routes.auth)}
+        >
+          {isLoggedIn ? 'Go to upload' : 'Sign in'}
         </button>
       </header>
 
@@ -32,8 +42,12 @@ function HomePage() {
               transparent similarity reports you can trust.
             </p>
             <div className="hero-actions">
-              <button className="submit" type="button" onClick={() => navigate(routes.auth)}>
-                Get started
+              <button
+                className="submit"
+                type="button"
+                onClick={() => navigate(isLoggedIn ? routes.upload : routes.auth)}
+              >
+                {isLoggedIn ? 'Continue scan' : 'Get started'}
               </button>
               <button className="outline-button" type="button">
                 View sample report

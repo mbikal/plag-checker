@@ -4,6 +4,9 @@ Handles user registration, login, and certificate generation.
 """
 import json
 import os
+import sys
+import tempfile
+import re
 from datetime import datetime, timedelta
 
 import bcrypt
@@ -11,14 +14,20 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
+from werkzeug.utils import secure_filename
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(BASE_DIR, "plag-system"))
+from checker import analyze_and_sign  # pylint: disable=wrong-import-position
 
 app = Flask(__name__)
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 USERS_FILE = os.path.join(BASE_DIR, 'users.json')
 CA_DIR = os.path.join(BASE_DIR, "ca/")
 cert_dir = os.path.join(BASE_DIR, "certs/")
 os.makedirs(cert_dir, exist_ok=True)
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @app.after_request
@@ -117,6 +126,16 @@ def signup():
 
     if not username or not password:
         return jsonify({'error': 'Username and password are required'}), 400
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters long'}), 400
+    if not re.search(r"[A-Z]", password):
+        return jsonify({'error': 'Password must include an uppercase letter'}), 400
+    if not re.search(r"[a-z]", password):
+        return jsonify({'error': 'Password must include a lowercase letter'}), 400
+    if not re.search(r"\d", password):
+        return jsonify({'error': 'Password must include a number'}), 400
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return jsonify({'error': 'Password must include a symbol'}), 400
 
     users = load_users()
     if username in users:
@@ -172,6 +191,55 @@ def login():
         "role": role,
         "certificate_path": cert_path
     })
+
+
+@app.route('/scan', methods=['POST'])
+def scan():
+    """
+    Handle file upload and plagiarism scan.
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "File is required"}), 400
+
+    uploaded = request.files["file"]
+    if not uploaded.filename:
+        return jsonify({"error": "Filename is required"}), 400
+    if not uploaded.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are supported"}), 400
+    if uploaded.mimetype not in ("application/pdf", "application/x-pdf"):
+        return jsonify({"error": "Invalid file type"}), 400
+
+    filename = secure_filename(uploaded.filename)
+    with tempfile.NamedTemporaryFile(dir=UPLOAD_DIR, suffix=f"_{filename}", delete=False) as temp_file:
+        uploaded.save(temp_file.name)
+        temp_path = temp_file.name
+
+    scan_id = os.urandom(8).hex()
+    annotated_path = os.path.join(UPLOAD_DIR, f"scan_{scan_id}.pdf")
+    try:
+        report = analyze_and_sign(temp_path, annotated_pdf_path=annotated_path)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    response = dict(report)
+    base_url = request.host_url.rstrip("/")
+    response["pdf_url"] = f"{base_url}/scan/{scan_id}/pdf"
+    return jsonify(response)
+
+
+@app.route('/scan/<scan_id>/pdf', methods=['GET'])
+def scan_pdf(scan_id):
+    """
+    Serve annotated PDF for a completed scan.
+    """
+    filename = f"scan_{scan_id}.pdf"
+    pdf_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(pdf_path):
+        return jsonify({"error": "Scan not found"}), 404
+    return send_file(pdf_path, mimetype="application/pdf")
 
 
 if __name__ == '__main__':
