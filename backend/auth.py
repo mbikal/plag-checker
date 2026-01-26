@@ -26,6 +26,7 @@ USERS_FILE = os.path.join(BASE_DIR, 'users.json')
 CA_DIR = os.path.join(BASE_DIR, "ca/")
 cert_dir = os.path.join(BASE_DIR, "certs/")
 os.makedirs(cert_dir, exist_ok=True)
+os.makedirs(CA_DIR, exist_ok=True)
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -65,12 +66,49 @@ def load_users():
     return {}
 
 
-# load CA private key and certificate
-with open(os.path.join(CA_DIR, 'ca.key'), 'rb') as f_key:
-    ca_key = serialization.load_pem_private_key(f_key.read(), None)
+def _ensure_ca():
+    ca_key_path = os.path.join(CA_DIR, "ca.key")
+    ca_cert_path = os.path.join(CA_DIR, "ca.crt")
 
-with open(os.path.join(CA_DIR, 'ca.crt'), 'rb') as f_cert:
-    ca_cert = x509.load_pem_x509_certificate(f_cert.read())
+    if os.path.exists(ca_key_path) and os.path.exists(ca_cert_path):
+        with open(ca_key_path, "rb") as f_key:
+            ca_key = serialization.load_pem_private_key(f_key.read(), None)
+        with open(ca_cert_path, "rb") as f_cert:
+            ca_cert = x509.load_pem_x509_certificate(f_cert.read())
+        return ca_key, ca_cert
+
+    ca_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Plag Checker"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Plag Checker CA"),
+        ]
+    )
+    ca_cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(subject)
+        .public_key(ca_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.utcnow())
+        .not_valid_after(datetime.utcnow() + timedelta(days=3650))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        .sign(ca_key, hashes.SHA256())
+    )
+
+    with open(ca_key_path, "wb") as f_key:
+        f_key.write(
+            ca_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
+    with open(ca_cert_path, "wb") as f_cert:
+        f_cert.write(ca_cert.public_bytes(serialization.Encoding.PEM))
+
+    return ca_key, ca_cert
 
 
 def generate_certificate(username, role):
@@ -84,6 +122,7 @@ def generate_certificate(username, role):
     Returns:
         str: Path to the generated certificate file
     """
+    ca_key, ca_cert = _ensure_ca()
     user_key = rsa.generate_private_key(
         public_exponent=65537,
         key_size=2048,
