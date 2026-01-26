@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY backend /app/backend
 COPY plag-system /app/plag-system
-COPY ca /app/ca
+RUN mkdir -p /app/ca /app/certs /app/uploads
 COPY users.json /app/users.json
 
 ENV PYTHONUNBUFFERED=1
