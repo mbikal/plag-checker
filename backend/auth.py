@@ -19,7 +19,7 @@ from werkzeug.utils import secure_filename
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(BASE_DIR, "plag-system"))
-from checker import analyze_and_sign  # pylint: disable=wrong-import-position
+from checker import analyze_and_sign  # pylint: disable=wrong-import-position,import-error
 
 app = Flask(__name__)
 USERS_FILE = os.path.join(BASE_DIR, 'users.json')
@@ -32,10 +32,26 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.after_request
 def add_cors_headers(response):
+    """Add CORS headers to API responses."""
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
+
+
+def _password_error(password):
+    """Return a validation error message for invalid passwords."""
+    if len(password) < 8:
+        return 'Password must be at least 8 characters long'
+    if not re.search(r"[A-Z]", password):
+        return 'Password must include an uppercase letter'
+    if not re.search(r"[a-z]", password):
+        return 'Password must include a lowercase letter'
+    if not re.search(r"\d", password):
+        return 'Password must include a number'
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return 'Password must include a symbol'
+    return None
 
 
 def load_users():
@@ -126,16 +142,9 @@ def signup():
 
     if not username or not password:
         return jsonify({'error': 'Username and password are required'}), 400
-    if len(password) < 8:
-        return jsonify({'error': 'Password must be at least 8 characters long'}), 400
-    if not re.search(r"[A-Z]", password):
-        return jsonify({'error': 'Password must include an uppercase letter'}), 400
-    if not re.search(r"[a-z]", password):
-        return jsonify({'error': 'Password must include a lowercase letter'}), 400
-    if not re.search(r"\d", password):
-        return jsonify({'error': 'Password must include a number'}), 400
-    if not re.search(r"[^A-Za-z0-9]", password):
-        return jsonify({'error': 'Password must include a symbol'}), 400
+    password_error = _password_error(password)
+    if password_error:
+        return jsonify({'error': password_error}), 400
 
     users = load_users()
     if username in users:
@@ -210,7 +219,11 @@ def scan():
         return jsonify({"error": "Invalid file type"}), 400
 
     filename = secure_filename(uploaded.filename)
-    with tempfile.NamedTemporaryFile(dir=UPLOAD_DIR, suffix=f"_{filename}", delete=False) as temp_file:
+    with tempfile.NamedTemporaryFile(
+        dir=UPLOAD_DIR,
+        suffix=f"_{filename}",
+        delete=False,
+    ) as temp_file:
         uploaded.save(temp_file.name)
         temp_path = temp_file.name
 
@@ -226,7 +239,9 @@ def scan():
 
     response = dict(report)
     base_url = request.host_url.rstrip("/")
-    response["pdf_url"] = f"{base_url}/scan/{scan_id}/pdf"
+    response["pdf_url"] = (
+        f"{base_url}/scan/{scan_id}/pdf"
+    )
     return jsonify(response)
 
 
@@ -244,4 +259,3 @@ def scan_pdf(scan_id):
 
 if __name__ == '__main__':
     app.run(debug=False)
-    
