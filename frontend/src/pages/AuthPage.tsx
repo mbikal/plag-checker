@@ -7,9 +7,12 @@ type AuthMode = 'login' | 'signup'
 type AuthResponse = {
   message?: string
   error?: string
+  role?: string
 }
 
-const apiBase = 'http://127.0.0.1:5000'
+const apiBase =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ||
+  window.location.origin
 
 function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('login')
@@ -77,7 +80,17 @@ function AuthPage() {
       if (mode === 'login' && !data.error) {
         localStorage.setItem('plagchecker.username', username)
         localStorage.setItem('plagchecker.session', 'true')
-        navigate(routes.upload)
+        const roleValue = typeof data.role === 'string' ? data.role.toLowerCase() : ''
+        if (roleValue) {
+          localStorage.setItem('plagchecker.role', roleValue)
+        }
+        if (roleValue === 'admin') {
+          navigate(routes.admin)
+        } else if (roleValue === 'teacher') {
+          navigate(routes.dashboard)
+        } else {
+          navigate(routes.upload)
+        }
       }
     } catch {
       setResponse({ error: 'Unable to reach the server. Check API URL or backend status.' })

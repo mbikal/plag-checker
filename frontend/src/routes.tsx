@@ -5,6 +5,11 @@ export const routes = {
   auth: '/auth',
   upload: '/upload',
   report: '/report',
+  admin: '/admin',
+  uploads: '/uploads',
+  users: '/users',
+  database: '/database',
+  dashboard: '/dashboard',
 } as const
 
 type RoutePath = typeof routes[keyof typeof routes]
@@ -24,6 +29,21 @@ const getRoute = (): RoutePath => {
   }
   if (path === routes.report) {
     return routes.report
+  }
+  if (path === routes.admin) {
+    return routes.admin
+  }
+  if (path === routes.uploads) {
+    return routes.uploads
+  }
+  if (path === routes.users) {
+    return routes.users
+  }
+  if (path === routes.database) {
+    return routes.database
+  }
+  if (path === routes.dashboard) {
+    return routes.dashboard
   }
   if (path === routes.auth) {
     return routes.auth

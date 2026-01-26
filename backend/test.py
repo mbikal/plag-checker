@@ -11,12 +11,15 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # pylint: disable=wrong-import-position,import-error
-from backend.auth import app, load_users, generate_certificate
+from backend.app import create_app
+from backend.ca import generate_certificate
+from backend.users import load_users
 
 
 @pytest.fixture(name='test_client')
 def fixture_client():
     """Create a test client for the Flask app."""
+    app = create_app()
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
@@ -30,16 +33,16 @@ def fixture_temp_users_file():
 
     # Store original USERS_FILE
     # pylint: disable=import-outside-toplevel
-    import backend.auth as auth_module
-    original_users_file = auth_module.USERS_FILE
-    auth_module.USERS_FILE = temp_path
+    import backend.config as config_module
+    original_users_file = config_module.USERS_FILE
+    config_module.USERS_FILE = temp_path
 
     yield temp_path
 
     # Cleanup
     if os.path.exists(temp_path):
         os.remove(temp_path)
-    auth_module.USERS_FILE = original_users_file
+    config_module.USERS_FILE = original_users_file
 
 
 class TestLoadUsers:
@@ -63,8 +66,8 @@ class TestLoadUsers:
             json.dump(test_data, f)
 
         # pylint: disable=import-outside-toplevel
-        import backend.auth as auth_module
-        auth_module.USERS_FILE = users_file
+        import backend.config as config_module
+        config_module.USERS_FILE = users_file
         users = load_users()
         assert 'testuser' in users
         assert users['testuser']['role'] == 'student'
@@ -239,4 +242,3 @@ class TestGenerateCertificate:
             os.remove(cert_path)
         if os.path.exists(key_path):
             os.remove(key_path)
-            

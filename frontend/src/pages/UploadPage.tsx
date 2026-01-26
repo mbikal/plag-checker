@@ -10,9 +10,13 @@ function UploadPage() {
   const username = useMemo(() => {
     return localStorage.getItem('plagchecker.username') || ''
   }, [])
+  const role = useMemo(() => {
+    return localStorage.getItem('plagchecker.role') || ''
+  }, [])
   const handleLogout = () => {
     localStorage.removeItem('plagchecker.username')
     localStorage.removeItem('plagchecker.session')
+    localStorage.removeItem('plagchecker.role')
     navigate(routes.auth)
   }
 
@@ -34,7 +38,9 @@ function UploadPage() {
     setReport(null)
 
     try {
-      const apiBase = 'http://127.0.0.1:5000'
+      const apiBase =
+        (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ||
+        window.location.origin
       const formData = new FormData()
       formData.append('file', selectedFile)
       const res = await fetch(`${apiBase}/scan`, {
@@ -88,6 +94,15 @@ function UploadPage() {
           {menuOpen ? (
             <div className="avatar-menu" role="menu">
               <p className="avatar-name">{username}</p>
+              {role === 'admin' ? (
+                <button
+                  className="logout-button"
+                  type="button"
+                  onClick={() => navigate(routes.admin)}
+                >
+                  Admin dashboard
+                </button>
+              ) : null}
               <button className="logout-button" type="button" onClick={handleLogout}>
                 Log out
               </button>

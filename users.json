@@ -5,6 +5,10 @@
     },
     "bikal1": {
         "password": "$2b$12$9AerUxXF2Wr58pGjO0d2cOrCi1zuPVpsBcJeSHa/km5KDYEtWE0cy",
-        "role": "student"
+        "role": "teacher"
+    },
+    "admin": {
+        "password": "$2b$12$myaB91kcupr4X9lyBPKOl.tdAxVg9PDongmgAT.7PhDEs9NbxFudi",
+        "role": "admin"
     }
 }

@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -86,6 +85,7 @@ def ensure_keypair(key_dir: Path | str = DEFAULT_KEYS_DIR) -> tuple[Path, Path]:
 
 @dataclass
 class MatchResult:
+    """Container for a similarity match."""
     path: str
     score: float
 
@@ -96,7 +96,10 @@ def _iter_corpus_files(corpus_dir: Path) -> Iterable[Path]:
     return [p for p in corpus_dir.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"]
 
 
-def analyze_file(file_path: Path | str, corpus_dir: Path | str = DEFAULT_CORPUS_DIR) -> dict:
+def analyze_file(  # pylint: disable=too-many-locals
+    file_path: Path | str,
+    corpus_dir: Path | str = DEFAULT_CORPUS_DIR,
+) -> dict:
     """
     Analyze a single file against a local corpus and return a JSON-ready report.
     """
@@ -138,7 +141,9 @@ def analyze_file(file_path: Path | str, corpus_dir: Path | str = DEFAULT_CORPUS_
         "matches": [match.__dict__ for match in matches[:10]],
         "similarity_percent": round(top_score * 100, 2),
         "matching_ngrams": len(unique_matches),
-        "plagiarism_percentage": round((len(unique_matches) / len(grams)) * 100, 2) if grams else 0.0,
+        "plagiarism_percentage": (
+            round((len(unique_matches) / len(grams)) * 100, 2) if grams else 0.0
+        ),
         "total_sentences": total_sentences,
         "matching_sentences": matching_sentences,
         "non_matching_sentences": non_matching_sentences,
@@ -168,7 +173,7 @@ def analyze_and_sign(
     return report
 
 
-def annotate_pdf(
+def annotate_pdf(  # pylint: disable=too-many-locals
     file_path: Path | str,
     corpus_dir: Path | str = DEFAULT_CORPUS_DIR,
     output_path: Path | str = "annotated.pdf",
