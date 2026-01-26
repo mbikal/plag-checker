@@ -1,10 +1,12 @@
 version: "3.9"
 
 services:
-  backend:
+  app:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
     ports:
       - "5000:5000"
     volumes:
@@ -12,14 +14,3 @@ services:
       - ./certs:/app/certs
       - ./users.json:/app/users.json
       - ./plag-system/corpus:/app/plag-system/corpus
-
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      args:
-        VITE_API_URL: "http://localhost:5000"
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend

@@ -9,7 +9,9 @@ type AuthResponse = {
   error?: string
 }
 
-const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || 'http://127.0.0.1:5000'
+const apiBase =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ||
+  window.location.origin
 
 function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('login')

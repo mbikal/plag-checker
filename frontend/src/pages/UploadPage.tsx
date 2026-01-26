@@ -36,7 +36,7 @@ function UploadPage() {
     try {
       const apiBase =
         (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ||
-        'http://127.0.0.1:5000'
+        window.location.origin
       const formData = new FormData()
       formData.append('file', selectedFile)
       const res = await fetch(`${apiBase}/scan`, {

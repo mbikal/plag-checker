@@ -14,7 +14,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -29,6 +29,7 @@ os.makedirs(cert_dir, exist_ok=True)
 os.makedirs(CA_DIR, exist_ok=True)
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+FRONTEND_DIST = os.path.join(BASE_DIR, "frontend", "dist")
 
 
 @app.after_request
@@ -294,6 +295,16 @@ def scan_pdf(scan_id):
     if not os.path.exists(pdf_path):
         return jsonify({"error": "Scan not found"}), 404
     return send_file(pdf_path, mimetype="application/pdf")
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    if not os.path.isdir(FRONTEND_DIST):
+        return jsonify({"error": "Frontend build not found"}), 404
+    if path and os.path.exists(os.path.join(FRONTEND_DIST, path)):
+        return send_from_directory(FRONTEND_DIST, path)
+    return send_from_directory(FRONTEND_DIST, "index.html")
 
 
 if __name__ == '__main__':
