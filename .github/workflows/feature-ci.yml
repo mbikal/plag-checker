@@ -96,3 +96,7 @@ jobs:
 
       - name: Run frontend sanity checks
         run: python frontend/test.py
+
+      - name: Run frontend security audit
+        run: npm audit --audit-level=high || true
+        working-directory: frontend

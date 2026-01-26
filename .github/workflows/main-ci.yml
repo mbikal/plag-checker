@@ -120,3 +120,29 @@ jobs:
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
+
+  frontend-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run frontend lint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Run frontend security audit
+        run: npm audit --audit-level=high || true
+        working-directory: frontend

@@ -10,7 +10,7 @@ from pathlib import Path
 from reportlab.pdfgen import canvas
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from checker import analyze_and_sign, analyze_file, ensure_keypair  # pylint: disable=import-error
+from checker import analyze_and_sign, analyze_file, ensure_keypair  # pylint: disable=wrong-import-position,import-error
 
 
 def _write_pdf(path: Path, content: str) -> None:
