@@ -300,6 +300,7 @@ def scan_pdf(scan_id):
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
+    """Serve the built frontend application."""
     if not os.path.isdir(FRONTEND_DIST):
         return jsonify({"error": "Frontend build not found"}), 404
     if path and os.path.exists(os.path.join(FRONTEND_DIST, path)):
