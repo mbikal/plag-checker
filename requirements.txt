@@ -8,3 +8,4 @@ pylint
 PyPDF2
 pdfplumber
 reportlab
+bandit
