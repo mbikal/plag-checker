@@ -32,15 +32,15 @@ jobs:
 
       - name: Run pylint
         run: |
-          pylint backend/*.py plag-system/*.py
+          pylint backend/*.py plag_system/*.py
 
       - name: Run bandit
         run: |
-          bandit -r backend/ plag-system/ -ll --exclude backend/test.py
+          bandit -r backend/ plag_system/ -ll --exclude backend/test.py
 
       - name: Run pytest
         run: |
-          pytest backend/test.py plag-system/test.py -v --tb=short
+          pytest backend/test.py plag_system/test.py -v --tb=short
 
   docker-build:
     runs-on: ubuntu-latest

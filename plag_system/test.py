@@ -76,4 +76,4 @@ if __name__ == "__main__":
     test_analyze_file_basic(Path("._tmp"))
     test_analyze_and_sign(Path("._tmp"))
     test_ensure_keypair_idempotent(Path("._tmp"))
-    print("plag-system/test.py: ok")
+    print("plag_system/test.py: ok")

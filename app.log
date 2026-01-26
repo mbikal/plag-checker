@@ -1,0 +1,11 @@
+2026-01-26 21:55:46,773 INFO Login success: admin (admin)
+2026-01-26 21:58:35,760 INFO Login success: bikal (student)
+2026-01-26 21:58:47,501 INFO Login success: admin (admin)
+2026-01-26 22:34:42,483 INFO Admin updated role: bikal1 -> teacher by admin
+2026-01-26 22:35:16,383 INFO Login success: bikal1 (teacher)
+2026-01-26 22:41:18,538 INFO Login success: admin (admin)
+2026-01-26 22:48:58,296 INFO Admin uploaded corpus file: threat_modelling.pdf by admin
+2026-01-26 22:59:50,122 INFO Admin uploaded corpus file: frequency_substitute.pdf by admin
+2026-01-26 23:04:38,334 INFO Login success: bikal1 (teacher)
+2026-01-26 23:18:48,138 INFO Scan success: cybersecurity_assessment_summarry.pdf
+2026-01-26 23:19:31,405 INFO Login success: bikal1 (teacher)

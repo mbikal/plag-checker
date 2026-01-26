@@ -15,7 +15,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY backend /app/backend
-COPY plag-system /app/plag-system
+COPY plag_system /app/plag_system
 COPY users.json /app/users.json
 RUN mkdir -p /app/ca /app/certs /app/uploads
 COPY --from=frontend-builder /app/dist /app/frontend/dist

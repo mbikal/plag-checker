@@ -13,4 +13,4 @@ services:
       - ./uploads:/app/uploads
       - ./certs:/app/certs
       - ./users.json:/app/users.json
-      - ./plag-system/corpus:/app/plag-system/corpus
+      - ./plag_system/corpus:/app/plag_system/corpus
