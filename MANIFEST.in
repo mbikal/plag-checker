@@ -1,0 +1,3 @@
+recursive-include plag_checker_app/frontend/dist *
+recursive-include plag_system/corpus *
+include users.json

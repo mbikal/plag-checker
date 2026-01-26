@@ -2,9 +2,9 @@
 Authentication module for plagiarism checker application.
 Handles user registration, login, and certificate generation.
 """
+import importlib.resources as resources
 import json
 import os
-import sys
 import tempfile
 import re
 from datetime import datetime, timedelta
@@ -14,28 +14,45 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(BASE_DIR, "plag-system"))
-from checker import analyze_and_sign  # pylint: disable=wrong-import-position
+from plag_system.checker import analyze_and_sign
 
 app = Flask(__name__)
 USERS_FILE = os.path.join(BASE_DIR, 'users.json')
 CA_DIR = os.path.join(BASE_DIR, "ca/")
 cert_dir = os.path.join(BASE_DIR, "certs/")
 os.makedirs(cert_dir, exist_ok=True)
+os.makedirs(CA_DIR, exist_ok=True)
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+FRONTEND_DIST = None
 
 
 @app.after_request
 def add_cors_headers(response):
+    """Add CORS headers to API responses."""
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
+
+
+def _password_error(password):
+    """Return a validation error message for invalid passwords."""
+    if len(password) < 8:
+        return 'Password must be at least 8 characters long'
+    if not re.search(r"[A-Z]", password):
+        return 'Password must include an uppercase letter'
+    if not re.search(r"[a-z]", password):
+        return 'Password must include a lowercase letter'
+    if not re.search(r"\d", password):
+        return 'Password must include a number'
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return 'Password must include a symbol'
+    return None
 
 
 def load_users():
@@ -49,12 +66,50 @@ def load_users():
     return {}
 
 
-# load CA private key and certificate
-with open(os.path.join(CA_DIR, 'ca.key'), 'rb') as f_key:
-    ca_key = serialization.load_pem_private_key(f_key.read(), None)
+def _ensure_ca():
+    """Ensure a local CA exists and return (private_key, certificate)."""
+    ca_key_path = os.path.join(CA_DIR, "ca.key")
+    ca_cert_path = os.path.join(CA_DIR, "ca.crt")
 
-with open(os.path.join(CA_DIR, 'ca.crt'), 'rb') as f_cert:
-    ca_cert = x509.load_pem_x509_certificate(f_cert.read())
+    if os.path.exists(ca_key_path) and os.path.exists(ca_cert_path):
+        with open(ca_key_path, "rb") as f_key:
+            ca_key = serialization.load_pem_private_key(f_key.read(), None)
+        with open(ca_cert_path, "rb") as f_cert:
+            ca_cert = x509.load_pem_x509_certificate(f_cert.read())
+        return ca_key, ca_cert
+
+    ca_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Plag Checker"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Plag Checker CA"),
+        ]
+    )
+    ca_cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(subject)
+        .public_key(ca_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.utcnow())
+        .not_valid_after(datetime.utcnow() + timedelta(days=3650))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        .sign(ca_key, hashes.SHA256())
+    )
+
+    with open(ca_key_path, "wb") as f_key:
+        f_key.write(
+            ca_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
+    with open(ca_cert_path, "wb") as f_cert:
+        f_cert.write(ca_cert.public_bytes(serialization.Encoding.PEM))
+
+    return ca_key, ca_cert
 
 
 def generate_certificate(username, role):
@@ -68,6 +123,7 @@ def generate_certificate(username, role):
     Returns:
         str: Path to the generated certificate file
     """
+    ca_key, ca_cert = _ensure_ca()
     user_key = rsa.generate_private_key(
         public_exponent=65537,
         key_size=2048,
@@ -126,16 +182,9 @@ def signup():
 
     if not username or not password:
         return jsonify({'error': 'Username and password are required'}), 400
-    if len(password) < 8:
-        return jsonify({'error': 'Password must be at least 8 characters long'}), 400
-    if not re.search(r"[A-Z]", password):
-        return jsonify({'error': 'Password must include an uppercase letter'}), 400
-    if not re.search(r"[a-z]", password):
-        return jsonify({'error': 'Password must include a lowercase letter'}), 400
-    if not re.search(r"\d", password):
-        return jsonify({'error': 'Password must include a number'}), 400
-    if not re.search(r"[^A-Za-z0-9]", password):
-        return jsonify({'error': 'Password must include a symbol'}), 400
+    password_error = _password_error(password)
+    if password_error:
+        return jsonify({'error': password_error}), 400
 
     users = load_users()
     if username in users:
@@ -210,7 +259,11 @@ def scan():
         return jsonify({"error": "Invalid file type"}), 400
 
     filename = secure_filename(uploaded.filename)
-    with tempfile.NamedTemporaryFile(dir=UPLOAD_DIR, suffix=f"_{filename}", delete=False) as temp_file:
+    with tempfile.NamedTemporaryFile(
+        dir=UPLOAD_DIR,
+        suffix=f"_{filename}",
+        delete=False,
+    ) as temp_file:
         uploaded.save(temp_file.name)
         temp_path = temp_file.name
 
@@ -226,7 +279,9 @@ def scan():
 
     response = dict(report)
     base_url = request.host_url.rstrip("/")
-    response["pdf_url"] = f"{base_url}/scan/{scan_id}/pdf"
+    response["pdf_url"] = (
+        f"{base_url}/scan/{scan_id}/pdf"
+    )
     return jsonify(response)
 
 
@@ -240,6 +295,34 @@ def scan_pdf(scan_id):
     if not os.path.exists(pdf_path):
         return jsonify({"error": "Scan not found"}), 404
     return send_file(pdf_path, mimetype="application/pdf")
+
+
+def _resolve_frontend_dist():
+    """Resolve the frontend dist path from the package or local build."""
+    local_dist = os.path.join(BASE_DIR, "frontend", "dist")
+    if os.path.isdir(local_dist):
+        return local_dist
+    try:
+        dist_path = resources.files("plag_checker_app").joinpath("frontend", "dist")
+        if dist_path.is_dir():
+            return str(dist_path)
+    except (ModuleNotFoundError, AttributeError):
+        pass
+    return local_dist
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    """Serve the built frontend application."""
+    global FRONTEND_DIST
+    if FRONTEND_DIST is None:
+        FRONTEND_DIST = _resolve_frontend_dist()
+    if not os.path.isdir(FRONTEND_DIST):
+        return jsonify({"error": "Frontend build not found"}), 404
+    if path and os.path.exists(os.path.join(FRONTEND_DIST, path)):
+        return send_from_directory(FRONTEND_DIST, path)
+    return send_from_directory(FRONTEND_DIST, "index.html")
 
 
 if __name__ == '__main__':

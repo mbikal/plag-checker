@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plag-checker"
+version = "1.0.0"
+description = "Plagiarism checker with auth and PDF scanning."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "flask",
+  "requests",
+  "cryptography",
+  "bcrypt",
+  "pytest",
+  "pytest-cov",
+  "pylint",
+  "PyPDF2",
+  "pdfplumber",
+  "reportlab",
+  "bandit",
+]
+
+[project.scripts]
+plag-checker = "plag_checker_app.__main__:main"
+
+[tool.setuptools]
+packages = ["backend", "plag_system", "plag_checker_app"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+plag_checker_app = ["frontend/dist/**"]
