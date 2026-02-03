@@ -5,10 +5,11 @@ import json
 import os
 import tempfile
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, after_this_request
 from werkzeug.utils import secure_filename
 
 from backend import config
+from backend.crypto_storage import decrypt_to_temp, encrypt_file_in_place
 from backend.logging_config import get_logger
 from plag_system.checker import analyze_and_sign
 
@@ -48,6 +49,7 @@ def scan():
     summary_path = os.path.join(config.UPLOAD_DIR, f"scan_{scan_id}.json")
     try:
         report = analyze_and_sign(temp_path, annotated_pdf_path=annotated_path)
+        encrypt_file_in_place(annotated_path)
     except ValueError as exc:
         logger.info("Scan failed: %s", exc)
         return jsonify({"error": str(exc)}), 400
@@ -82,7 +84,15 @@ def scan_pdf(scan_id: str):
     if not os.path.exists(pdf_path):
         logger.info("Scan PDF not found: %s", scan_id)
         return jsonify({"error": "Scan not found"}), 404
-    return send_file(pdf_path, mimetype="application/pdf")
+    temp_path = decrypt_to_temp(pdf_path)
+
+    @after_this_request
+    def _cleanup(response):
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return response
+
+    return send_file(temp_path, mimetype="application/pdf")
 
 
 @scan_bp.route("/uploads/<filename>", methods=["GET"])
@@ -93,4 +103,12 @@ def upload_file(filename: str):
     file_path = os.path.join(config.UPLOAD_DIR, filename)
     if not os.path.exists(file_path):
         return jsonify({"error": "Not found"}), 404
-    return send_file(file_path, mimetype="application/pdf")
+    temp_path = decrypt_to_temp(file_path)
+
+    @after_this_request
+    def _cleanup(response):
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return response
+
+    return send_file(temp_path, mimetype="application/pdf")

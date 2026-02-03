@@ -21,6 +21,7 @@ from PyPDF2 import PdfReader, PdfWriter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+from plag_system.crypto_storage import decrypt_to_temp, is_encrypted
 
 DEFAULT_CORPUS_DIR = Path(__file__).resolve().parent / "corpus"
 DEFAULT_KEYS_DIR = Path(__file__).resolve().parent / "keys"
@@ -31,8 +32,15 @@ _LOGGER = logging.getLogger(__name__)
 def _read_text(path: Path) -> str:
     if path.suffix.lower() != ".pdf":
         raise ValueError("Only PDF files are supported.")
-    with pdfplumber.open(str(path)) as pdf:
-        pages = [page.extract_text() or "" for page in pdf.pages]
+    with path.open("rb") as file_handle:
+        header = file_handle.read(8)
+    temp_path = decrypt_to_temp(path) if is_encrypted(header) else path
+    try:
+        with pdfplumber.open(str(temp_path)) as pdf:
+            pages = [page.extract_text() or "" for page in pdf.pages]
+    finally:
+        if temp_path != path and temp_path.exists():
+            temp_path.unlink()
     return "\n".join(pages)
 
 
