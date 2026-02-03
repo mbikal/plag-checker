@@ -3,7 +3,9 @@
 ## Tutorial video
 
 
-https://github.com/user-attachments/assets/e6040e23-1312-49d6-8574-67c869f371bc
+https://github.com/user-attachments/assets/8c9911c3-3ca6-4971-9f82-9c495084d449
+
+
 
 
 
