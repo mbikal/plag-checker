@@ -262,7 +262,7 @@ def admin_corpus_delete():
 @admin_bp.route("/admin/corpus/file/<filename>", methods=["GET"])
 def admin_corpus_file(filename: str):
     """Serve a corpus PDF (admin only)."""
-    admin_username, error = require_admin_query()
+    _, error = require_admin_query()
     if error:
         return error
     if not filename.lower().endswith(".pdf"):
