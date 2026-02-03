@@ -1,5 +1,8 @@
 # Plag Checker
 
+## Tutorial video
+<video controls width="720" src="tutorial.mov"></video>
+
 ## Vite API URL (VITE_API_URL)
 Use `VITE_API_URL` to point the frontend at the backend API.
 
