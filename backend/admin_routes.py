@@ -11,9 +11,10 @@ from backend.logging_config import get_logger
 from backend.request_utils import (
     get_json_body,
     require_admin,
+    require_admin_form,
     require_username_password_or_error,
 )
-from backend.security import password_error, verify_admin
+from backend.security import password_error
 from backend.uploads import list_scan_uploads
 from backend.users import create_user, load_users, save_users, update_user_password
 
@@ -38,16 +39,6 @@ def _require_admin_and_user_credentials(
         username, password = credentials
         return admin_username, username, password
     return credentials
-
-
-def _require_admin_form() -> tuple[str | None, tuple | None]:
-    admin_username = request.form.get("admin_username")
-    admin_password = request.form.get("admin_password")
-    if not admin_username or not admin_password:
-        return None, (jsonify({"error": "Admin credentials required"}), 401)
-    if not verify_admin(admin_username, admin_password):
-        return None, (jsonify({"error": "Unauthorized"}), 401)
-    return admin_username, None
 
 
 def _validate_pdf_upload(uploaded) -> tuple | None:
@@ -228,7 +219,7 @@ def admin_corpus_list():
 @admin_bp.route("/admin/corpus/upload", methods=["POST"])
 def admin_corpus_upload():
     """Upload a PDF into the corpus (admin only)."""
-    admin_username, error = _require_admin_form()
+    admin_username, error = require_admin_form()
     if error:
         return error
 

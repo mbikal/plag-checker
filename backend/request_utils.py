@@ -64,3 +64,14 @@ def require_username_password_or_error(
     if error:
         return error
     return credentials
+
+
+def require_admin_form() -> tuple[str | None, tuple[Any, int] | None]:
+    """Validate admin credentials from multipart form data."""
+    admin_username = request.form.get("admin_username")
+    admin_password = request.form.get("admin_password")
+    if not admin_username or not admin_password:
+        return None, (jsonify({"error": "Admin credentials required"}), 401)
+    if not verify_admin(admin_username, admin_password):
+        return None, (jsonify({"error": "Unauthorized"}), 401)
+    return admin_username, None
