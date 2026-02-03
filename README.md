@@ -1,7 +1,11 @@
 # Plag Checker
 
 ## Tutorial video
-<video controls width="720" src="tutorial.mov"></video>
+
+
+https://github.com/user-attachments/assets/e6040e23-1312-49d6-8574-67c869f371bc
+
+
 
 ## Vite API URL (VITE_API_URL)
 Use `VITE_API_URL` to point the frontend at the backend API.
