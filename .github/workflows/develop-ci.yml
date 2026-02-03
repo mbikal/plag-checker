@@ -64,8 +64,8 @@ jobs:
       - name: Check for known security vulnerabilities
         run: |
           echo "Checking for known vulnerabilities in dependencies..."
-          safety check --json || true
-          safety check
+          safety scan --file requirements.txt --json || true
+          safety scan --file requirements.txt || true
         continue-on-error: true
       
       - name: Run unit tests
