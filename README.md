@@ -1,5 +1,23 @@
 # Plag Checker
 
+## Vite API URL (VITE_API_URL)
+Use `VITE_API_URL` to point the frontend at the backend API.
+
+macOS/Linux:
+```bash
+cd frontend
+VITE_API_URL=http://127.0.0.1:5000 npm run dev
+```
+
+Windows (PowerShell):
+```bash
+cd frontend
+$env:VITE_API_URL="http://127.0.0.1:5000"
+npm run dev
+```
+
+In code, access it with `import.meta.env.VITE_API_URL`.
+
 ## Project overview and purpose
 Plag Checker is a web application that helps detect plagiarism in PDF documents. Users can upload a PDF, compare it against a local corpus, and receive a similarity report with highlighted matches. The system also supports role-based access for admins, teachers, and students.
 

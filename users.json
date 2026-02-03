@@ -10,5 +10,9 @@
     "admin": {
         "password": "$2b$12$myaB91kcupr4X9lyBPKOl.tdAxVg9PDongmgAT.7PhDEs9NbxFudi",
         "role": "admin"
+    },
+    "firstuser": {
+        "password": "$2b$12$mVe2PfljG3E/ZLCP0hqIgenUKkxeLxHpFAnxp0KNICxOeD1rrnff6",
+        "role": "student"
     }
 }

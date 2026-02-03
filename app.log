@@ -18,3 +18,9 @@
 2026-01-28 16:18:59,954 INFO Login success: admin (admin)
 2026-01-28 18:14:05,463 INFO Scan success: Bikal_Magar_CV.pdf
 2026-02-03 09:33:20,201 INFO Login success: admin (admin)
+2026-02-03 13:17:05,749 INFO Login success: admin (admin)
+2026-02-03 13:20:58,366 INFO Signup success: firstuser (student)
+2026-02-03 13:21:03,344 INFO Login success: firstuser (student)
+2026-02-03 13:21:18,044 INFO Scan success: Booms_with_Ghidra.pdf
+2026-02-03 13:23:57,701 INFO Login success: firstuser (student)
+2026-02-03 13:24:07,560 INFO Scan success: Bikal_Magar_CV.pdf
