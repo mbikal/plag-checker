@@ -1,4 +1,5 @@
 """Hybrid encryption helpers for corpus storage."""
+# pylint: disable=duplicate-code
 from __future__ import annotations
 
 import os
@@ -53,10 +54,9 @@ def is_encrypted(payload: bytes) -> bool:
 
 
 def decrypt_to_temp(path: Path, suffix: str = ".pdf") -> Path:
+    """Decrypt a file into a temporary path and return it."""
     payload = path.read_bytes()
     plaintext = decrypt_if_needed(payload)
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    temp_file.write(plaintext)
-    temp_file.flush()
-    temp_file.close()
-    return Path(temp_file.name)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+        temp_file.write(plaintext)
+        return Path(temp_file.name)

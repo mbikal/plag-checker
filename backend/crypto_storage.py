@@ -28,6 +28,7 @@ def _ensure_master_key() -> bytes:
 
 
 def _encrypt_bytes(plaintext: bytes) -> bytes:
+    """Encrypt data with a wrapped per-file key."""
     master_key = _ensure_master_key()
     data_key = os.urandom(DATA_KEY_SIZE)
     wrap_nonce = os.urandom(NONCE_SIZE)
@@ -38,6 +39,7 @@ def _encrypt_bytes(plaintext: bytes) -> bytes:
 
 
 def _decrypt_bytes(payload: bytes) -> bytes:
+    """Decrypt data that uses the hybrid envelope format."""
     if not payload.startswith(MAGIC):
         return payload
     offset = len(MAGIC)
@@ -54,6 +56,7 @@ def _decrypt_bytes(payload: bytes) -> bytes:
 
 
 def encrypt_file_in_place(path: str | Path) -> None:
+    """Encrypt a file in place if it is not already encrypted."""
     file_path = Path(path)
     payload = file_path.read_bytes()
     if payload.startswith(MAGIC):
@@ -62,11 +65,10 @@ def encrypt_file_in_place(path: str | Path) -> None:
 
 
 def decrypt_to_temp(path: str | Path, suffix: str = ".pdf") -> Path:
+    """Decrypt a file into a temporary path and return it."""
     file_path = Path(path)
     payload = file_path.read_bytes()
     plaintext = _decrypt_bytes(payload)
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    temp_file.write(plaintext)
-    temp_file.flush()
-    temp_file.close()
-    return Path(temp_file.name)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+        temp_file.write(plaintext)
+        return Path(temp_file.name)

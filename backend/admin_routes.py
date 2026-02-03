@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 
-from flask import Blueprint, jsonify, request, send_file, after_this_request
+from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
 from backend import config
@@ -15,7 +15,8 @@ from backend.request_utils import (
     require_admin_query,
     require_username_password_or_error,
 )
-from backend.crypto_storage import decrypt_to_temp, encrypt_file_in_place
+from backend.crypto_storage import encrypt_file_in_place
+from backend.file_response import send_decrypted_pdf
 from backend.security import password_error
 from backend.uploads import list_scan_uploads
 from backend.users import create_user, load_users, save_users, update_user_password
@@ -272,12 +273,4 @@ def admin_corpus_file(filename: str):
     file_path = os.path.join(config.CORPUS_DIR, filename)
     if not os.path.exists(file_path):
         return jsonify({"error": "File not found"}), 404
-    temp_path = decrypt_to_temp(file_path)
-
-    @after_this_request
-    def _cleanup(response):
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        return response
-
-    return send_file(temp_path, mimetype="application/pdf")
+    return send_decrypted_pdf(file_path)
