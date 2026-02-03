@@ -12,6 +12,7 @@ from backend.request_utils import (
     get_json_body,
     require_admin,
     require_admin_form,
+    require_admin_query,
     require_username_password_or_error,
 )
 from backend.security import password_error
@@ -261,12 +262,9 @@ def admin_corpus_delete():
 @admin_bp.route("/admin/corpus/file/<filename>", methods=["GET"])
 def admin_corpus_file(filename: str):
     """Serve a corpus PDF (admin only)."""
-    admin_username = request.args.get("admin_username")
-    admin_password = request.args.get("admin_password")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
+    admin_username, error = require_admin_query()
+    if error:
+        return error
     if not filename.lower().endswith(".pdf"):
         return jsonify({"error": "Only PDF files are supported"}), 400
     file_path = os.path.join(config.CORPUS_DIR, filename)

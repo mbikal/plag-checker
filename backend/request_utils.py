@@ -75,3 +75,14 @@ def require_admin_form() -> tuple[str | None, tuple[Any, int] | None]:
     if not verify_admin(admin_username, admin_password):
         return None, (jsonify({"error": "Unauthorized"}), 401)
     return admin_username, None
+
+
+def require_admin_query() -> tuple[str | None, tuple[Any, int] | None]:
+    """Validate admin credentials from query parameters."""
+    admin_username = request.args.get("admin_username")
+    admin_password = request.args.get("admin_password")
+    if not admin_username or not admin_password:
+        return None, (jsonify({"error": "Admin credentials required"}), 401)
+    if not verify_admin(admin_username, admin_password):
+        return None, (jsonify({"error": "Unauthorized"}), 401)
+    return admin_username, None
