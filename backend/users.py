@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Dict, Any
+from typing import Any, Dict
+
+import bcrypt
 
 from backend import config
-from backend.security import hash_password
 
 
 def load_users() -> Dict[str, Any]:
@@ -24,6 +25,11 @@ def save_users(users: Dict[str, Any]) -> None:
     """Persist users to JSON file."""
     with open(config.USERS_FILE, "w", encoding="utf-8") as file_handle:
         json.dump(users, file_handle, indent=4)
+
+
+def hash_password(password: str) -> str:
+    """Hash password with bcrypt."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def create_user(username: str, password: str, role: str) -> str | None:

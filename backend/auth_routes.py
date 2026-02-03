@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import bcrypt
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from backend.ca import generate_certificate
 from backend.logging_config import get_logger
-from backend.request_utils import get_json_body, require_username_password
+from backend.request_utils import get_json_body, require_username_password_or_error
 from backend.security import password_error
 from backend.users import create_user, load_users
 
@@ -21,14 +21,15 @@ def signup():
     if error:
         return error
 
-    credentials, error = require_username_password(
+    credentials = require_username_password_or_error(
         data,
         error_message="Username and password are required",
         status_code=400,
     )
-    if error:
-        return error
-    username, password = credentials
+    if isinstance(credentials, tuple) and len(credentials) == 2:
+        username, password = credentials
+    else:
+        return credentials
     role = data.get("role", "student")
 
     pwd_error = password_error(password)
@@ -51,15 +52,16 @@ def login():
     if error:
         return error
 
-    credentials, error = require_username_password(
+    credentials = require_username_password_or_error(
         data,
         error_message="Invalid username or password",
         status_code=401,
     )
-    if error:
+    if isinstance(credentials, tuple) and len(credentials) == 2:
+        username, password = credentials
+    else:
         logger.info("Login failed: missing credentials")
-        return error
-    username, password = credentials
+        return credentials
 
     users = load_users()
     if username not in users:

@@ -8,11 +8,6 @@ import bcrypt
 from backend.users import load_users
 
 
-def hash_password(password: str) -> str:
-    """Hash password with bcrypt."""
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-
 def password_error(password: str) -> str | None:
     """Return a validation error message for invalid passwords."""
     if len(password) < 8:

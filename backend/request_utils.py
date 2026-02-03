@@ -52,3 +52,15 @@ def require_username_password(
     if not username or not password:
         return None, (jsonify({"error": error_message}), status_code)
     return (username, password), None
+
+
+def require_username_password_or_error(
+    data: dict[str, Any],
+    error_message: str,
+    status_code: int,
+) -> tuple[str, str] | tuple[Any, int]:
+    """Return credentials or a Flask error response tuple."""
+    credentials, error = require_username_password(data, error_message, status_code)
+    if error:
+        return error
+    return credentials

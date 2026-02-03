@@ -8,12 +8,58 @@ from werkzeug.utils import secure_filename
 
 from backend import config
 from backend.logging_config import get_logger
-from backend.request_utils import get_json_body, require_admin, require_username_password
+from backend.request_utils import (
+    get_json_body,
+    require_admin,
+    require_username_password_or_error,
+)
 from backend.security import password_error, verify_admin
+from backend.uploads import list_scan_uploads
 from backend.users import create_user, load_users, save_users, update_user_password
 
 admin_bp = Blueprint("admin", __name__)
 logger = get_logger()
+
+
+def _require_admin_and_user_credentials(
+    data: dict,
+    error_message: str,
+    status_code: int,
+) -> tuple[str, str, str] | tuple:
+    admin_username, error = require_admin(data)
+    if error:
+        return error
+    credentials = require_username_password_or_error(
+        data,
+        error_message=error_message,
+        status_code=status_code,
+    )
+    if isinstance(credentials, tuple) and len(credentials) == 2:
+        username, password = credentials
+        return admin_username, username, password
+    return credentials
+
+
+def _require_admin_form() -> tuple[str | None, tuple | None]:
+    admin_username = request.form.get("admin_username")
+    admin_password = request.form.get("admin_password")
+    if not admin_username or not admin_password:
+        return None, (jsonify({"error": "Admin credentials required"}), 401)
+    if not verify_admin(admin_username, admin_password):
+        return None, (jsonify({"error": "Unauthorized"}), 401)
+    return admin_username, None
+
+
+def _validate_pdf_upload(uploaded) -> tuple | None:
+    if not uploaded:
+        return jsonify({"error": "File is required"}), 400
+    if not uploaded.filename:
+        return jsonify({"error": "Filename is required"}), 400
+    if not uploaded.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are supported"}), 400
+    if uploaded.mimetype not in ("application/pdf", "application/x-pdf"):
+        return jsonify({"error": "Invalid file type"}), 400
+    return None
 
 
 @admin_bp.route("/admin/logs", methods=["POST"])
@@ -34,17 +80,15 @@ def admin_create_teacher():
     data, error = get_json_body()
     if error:
         return error
-    admin_username, error = require_admin(data)
-    if error:
-        return error
-    credentials, error = require_username_password(
+    result = _require_admin_and_user_credentials(
         data,
         error_message="Username and password are required",
         status_code=400,
     )
-    if error:
-        return error
-    username, password = credentials
+    if isinstance(result, tuple) and len(result) == 3:
+        admin_username, username, password = result
+    else:
+        return result
 
     pwd_error = password_error(password)
     if pwd_error:
@@ -63,20 +107,11 @@ def admin_uploads():
     data, error = get_json_body()
     if error:
         return error
-    admin_username, error = require_admin(data)
+    _, error = require_admin(data)
     if error:
         return error
 
-    uploads = []
-    for name in sorted(os.listdir(config.UPLOAD_DIR)):
-        if name.startswith("scan_") and name.endswith(".pdf"):
-            uploads.append(
-                {
-                    "name": name,
-                    "url": f"{request.host_url.rstrip('/')}/uploads/{name}",
-                }
-            )
-    return jsonify({"files": uploads})
+    return jsonify({"files": list_scan_uploads(request, include_summary=False)})
 
 
 @admin_bp.route("/admin/users", methods=["POST"])
@@ -152,17 +187,15 @@ def admin_reset_password():
     data, error = get_json_body()
     if error:
         return error
-    admin_username, error = require_admin(data)
-    if error:
-        return error
-    credentials, error = require_username_password(
+    result = _require_admin_and_user_credentials(
         data,
         error_message="Username and password are required",
         status_code=400,
     )
-    if error:
-        return error
-    username, password = credentials
+    if isinstance(result, tuple) and len(result) == 3:
+        admin_username, username, password = result
+    else:
+        return result
 
     pwd_error = password_error(password)
     if pwd_error:
@@ -195,22 +228,14 @@ def admin_corpus_list():
 @admin_bp.route("/admin/corpus/upload", methods=["POST"])
 def admin_corpus_upload():
     """Upload a PDF into the corpus (admin only)."""
-    admin_username = request.form.get("admin_username")
-    admin_password = request.form.get("admin_password")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
+    admin_username, error = _require_admin_form()
+    if error:
+        return error
 
-    if "file" not in request.files:
-        return jsonify({"error": "File is required"}), 400
-    uploaded = request.files["file"]
-    if not uploaded.filename:
-        return jsonify({"error": "Filename is required"}), 400
-    if not uploaded.filename.lower().endswith(".pdf"):
-        return jsonify({"error": "Only PDF files are supported"}), 400
-    if uploaded.mimetype not in ("application/pdf", "application/x-pdf"):
-        return jsonify({"error": "Invalid file type"}), 400
+    uploaded = request.files.get("file")
+    error = _validate_pdf_upload(uploaded)
+    if error:
+        return error
 
     filename = secure_filename(uploaded.filename)
     dest_path = os.path.join(config.CORPUS_DIR, filename)
