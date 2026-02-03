@@ -29,6 +29,11 @@ function AdminPage() {
     (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ||
     window.location.origin
 
+  const goTo = (path: string) => {
+    setShowAdminMenu(false)
+    navigate(path as typeof routes[keyof typeof routes])
+  }
+
   const fetchLogs = async () => {
     setError(null)
     setStatus(null)
@@ -179,13 +184,13 @@ function AdminPage() {
         </div>
       </header>
 
-      <main className="content">
+      <main className="content admin-full">
         <section className="intro">
           <h1>Monitor the system.</h1>
           <p>Review recent activity and create teacher accounts.</p>
         </section>
 
-        <section className="panel">
+        <section className="panel full-panel">
           <div className="admin-grid">
             <div className="admin-card">
               <h3>System logs</h3>
@@ -246,7 +251,3 @@ function AdminPage() {
 }
 
 export default AdminPage
-  const goTo = (path: string) => {
-    setShowAdminMenu(false)
-    navigate(path as typeof routes[keyof typeof routes])
-  }

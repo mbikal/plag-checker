@@ -4,6 +4,7 @@ Tests for plagiarism checker module.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from reportlab.pdfgen import canvas
@@ -48,18 +49,19 @@ def test_analyze_and_sign(tmp_path: Path) -> None:
     target_file = tmp_path / "target.pdf"
     _write_pdf(target_file, "A second sample document to check similarity and signatures.")
 
+    os.environ["PLAG_KEYSTORE_PASSWORD"] = "test-password"
     key_dir = tmp_path / "keys"
     report = analyze_and_sign(target_file, corpus_dir=corpus_dir, key_dir=key_dir)
 
     assert "signature" in report
     assert "public_key" in report
-    assert Path(key_dir / "signing_private.pem").exists()
-    assert Path(key_dir / "signing_public.pem").exists()
+    assert Path(key_dir / "signing_key.p12").exists()
     assert json.loads(json.dumps(report))
 
 
 def test_ensure_keypair_idempotent(tmp_path: Path) -> None:
     """Ensure keypair creation is idempotent."""
+    os.environ["PLAG_KEYSTORE_PASSWORD"] = "test-password"
     key_dir = tmp_path / "keys"
     private_path, public_path = ensure_keypair(key_dir=key_dir)
     private_path_2, public_path_2 = ensure_keypair(key_dir=key_dir)

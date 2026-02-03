@@ -207,6 +207,99 @@
   color: var(--muted);
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  z-index: 20;
+}
+
+.modal {
+  width: min(720px, 100%);
+  background: #1e1c1a;
+  color: #f8f4ee;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(10, 10, 10, 0.35);
+  padding: 1.5rem 1.75rem 1.75rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modal .ghost-button {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fef7ee;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.modal .ghost-button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.modal-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.report-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.report-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.similarity-score {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.report-subtitle {
+  margin: 0;
+  color: rgba(248, 244, 238, 0.72);
+  font-size: 0.9rem;
+}
+
+.source-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.95rem;
+  color: rgba(248, 244, 238, 0.85);
+}
+
+.flag-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: rgba(248, 244, 238, 0.8);
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
 .intro {
   animation: fadeSlide 0.9s ease forwards;
   opacity: 0;
@@ -420,8 +513,20 @@
 
 .logs {
   margin-top: 1.5rem;
-  max-height: 320px;
   width: 100%;
+  height: clamp(320px, calc(100vh - 360px), 75vh);
+}
+
+.full-panel {
+  min-height: clamp(480px, calc(100vh - 220px), 100vh);
+}
+
+.admin-full {
+  grid-template-columns: 1fr;
+}
+
+.admin-full .panel.full-panel {
+  min-height: calc(100vh - 220px);
 }
 
 .admin-menu {
@@ -496,6 +601,16 @@
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
+}
+
+.user-actions .ghost-button {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #f9f4e3;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.user-actions .ghost-button:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .user-actions select {

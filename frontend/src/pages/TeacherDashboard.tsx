@@ -95,7 +95,7 @@ function TeacherDashboard() {
         </button>
       </header>
 
-      <main className="content">
+      <main className="content admin-full">
         <section className="intro">
           <h1>Welcome, {username || 'teacher'}.</h1>
           <p>Review submissions, manage classes, and track reports.</p>

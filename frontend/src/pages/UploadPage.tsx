@@ -111,7 +111,7 @@ function UploadPage() {
         </div>
       </header>
 
-      <main className="content">
+      <main className="content admin-full">
         <section className="intro">
           <h1>Start a plagiarism scan.</h1>
           <p>

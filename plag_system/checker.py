@@ -6,12 +6,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.hazmat.primitives.asymmetric import ed25519
 import pdfplumber
 from PyPDF2 import PdfReader, PdfWriter
@@ -21,6 +24,8 @@ from reportlab.pdfgen import canvas
 
 DEFAULT_CORPUS_DIR = Path(__file__).resolve().parent / "corpus"
 DEFAULT_KEYS_DIR = Path(__file__).resolve().parent / "keys"
+DEFAULT_KEYSTORE_NAME = "signing_key.p12"
+_LOGGER = logging.getLogger(__name__)
 
 
 def _read_text(path: Path) -> str:
@@ -53,34 +58,52 @@ def _jaccard(a: set[str], b: set[str]) -> float:
     return len(a & b) / len(a | b)
 
 
-def ensure_keypair(key_dir: Path | str = DEFAULT_KEYS_DIR) -> tuple[Path, Path]:
+def _get_keystore_password() -> bytes:
+    password = os.getenv("PLAG_KEYSTORE_PASSWORD")
+    if not password:
+        _LOGGER.warning(
+            "PLAG_KEYSTORE_PASSWORD not set. Using development-only default password."
+        )
+        password = "plag-checker-dev"
+    return password.encode("utf-8")
+
+
+def ensure_keypair(key_dir: Path | str = DEFAULT_KEYS_DIR) -> tuple[Path, bytes]:
     """
-    Ensure an Ed25519 keypair exists and return (private_key_path, public_key_path).
+    Ensure a PKCS#12 keystore exists and return (keystore_path, public_key_pem).
     """
     key_dir = Path(key_dir)
     key_dir.mkdir(parents=True, exist_ok=True)
-    private_path = key_dir / "signing_private.pem"
-    public_path = key_dir / "signing_public.pem"
+    keystore_path = key_dir / DEFAULT_KEYSTORE_NAME
+    password = _get_keystore_password()
 
-    if private_path.exists() and public_path.exists():
-        return private_path, public_path
+    if keystore_path.exists():
+        key, _, _ = pkcs12.load_key_and_certificates(keystore_path.read_bytes(), password)
+        if key is None:
+            raise ValueError("Keystore is missing a private key.")
+        public_key = key.public_key()
+        public_bytes = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        return keystore_path, public_bytes
 
     private_key = ed25519.Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
-
-    private_bytes = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
     public_bytes = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
 
-    private_path.write_bytes(private_bytes)
-    public_path.write_bytes(public_bytes)
-    return private_path, public_path
+    keystore_bytes = pkcs12.serialize_key_and_certificates(
+        name=b"plag-checker-signing",
+        key=private_key,
+        cert=None,
+        cas=None,
+        encryption_algorithm=serialization.BestAvailableEncryption(password),
+    )
+    keystore_path.write_bytes(keystore_bytes)
+    return keystore_path, public_bytes
 
 
 @dataclass
@@ -162,14 +185,19 @@ def analyze_and_sign(
     report = analyze_file(file_path, corpus_dir=corpus_dir)
     if annotated_pdf_path:
         annotate_pdf(file_path, corpus_dir=corpus_dir, output_path=annotated_pdf_path)
-    private_path, public_path = ensure_keypair(key_dir=key_dir)
-
-    private_key = serialization.load_pem_private_key(private_path.read_bytes(), password=None)
+    keystore_path, public_key_pem = ensure_keypair(key_dir=key_dir)
+    password = _get_keystore_password()
+    private_key, _, _ = pkcs12.load_key_and_certificates(
+        keystore_path.read_bytes(),
+        password,
+    )
+    if private_key is None:
+        raise ValueError("Signing keystore did not contain a private key.")
     payload = json.dumps(report, sort_keys=True).encode("utf-8")
     signature = private_key.sign(payload)
 
     report["signature"] = signature.hex()
-    report["public_key"] = public_path.read_text(encoding="utf-8")
+    report["public_key"] = public_key_pem.decode("utf-8")
     return report
 
 

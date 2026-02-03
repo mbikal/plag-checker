@@ -54,7 +54,7 @@ function ReportPage() {
         </button>
       </header>
 
-      <main className="content">
+      <main className="content admin-full">
         <section className="intro">
           <h1>Scan results</h1>
           <p>Review the similarity matches and export results for reporting.</p>

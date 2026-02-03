@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { navigate, routes } from '../routes'
 import reportImage from '../assets/report.svg'
 import scanImage from '../assets/scan.svg'
@@ -9,6 +9,7 @@ function HomePage() {
     () => localStorage.getItem('plagchecker.session') === 'true',
     [],
   )
+  const [showReport, setShowReport] = useState(false)
 
   return (
     <div className="page">
@@ -49,7 +50,11 @@ function HomePage() {
               >
                 {isLoggedIn ? 'Continue scan' : 'Get started'}
               </button>
-              <button className="outline-button" type="button">
+              <button
+                className="outline-button"
+                type="button"
+                onClick={() => setShowReport(true)}
+              >
                 View sample report
               </button>
             </div>
@@ -90,6 +95,52 @@ function HomePage() {
           </article>
         </section>
       </main>
+
+      {showReport ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal">
+            <div className="modal-header">
+              <div>
+                <p className="modal-title">Sample report</p>
+                <p className="report-subtitle">Similarity scan summary</p>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setShowReport(false)}>
+                Close
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="report-card">
+                <h3>Overall similarity</h3>
+                <p className="similarity-score">18%</p>
+                <p className="report-subtitle">8 matched sentences • 42 total sentences</p>
+              </div>
+              <div className="report-card">
+                <h3>Top sources</h3>
+                <div className="source-row">
+                  <span>Open Web: Example.edu</span>
+                  <span>7%</span>
+                </div>
+                <div className="source-row">
+                  <span>Journal archive</span>
+                  <span>5%</span>
+                </div>
+                <div className="source-row">
+                  <span>Internal submissions</span>
+                  <span>6%</span>
+                </div>
+              </div>
+              <div className="report-card">
+                <h3>Flagged passages</h3>
+                <ul className="flag-list">
+                  <li>Paragraph 2 • Similar phrasing with Example.edu</li>
+                  <li>Paragraph 4 • Overlap with journal abstract</li>
+                  <li>Paragraph 7 • Paraphrased from internal archive</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
