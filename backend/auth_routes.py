@@ -6,8 +6,9 @@ from flask import Blueprint, jsonify, request
 
 from backend.ca import generate_certificate
 from backend.logging_config import get_logger
+from backend.request_utils import get_json_body, require_username_password
 from backend.security import password_error
-from backend.users import load_users, save_users
+from backend.users import create_user, load_users
 
 auth_bp = Blueprint("auth", __name__)
 logger = get_logger()
@@ -16,33 +17,28 @@ logger = get_logger()
 @auth_bp.route("/signup", methods=["POST"])
 def signup():
     """Handle user registration."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
+    data, error = get_json_body()
+    if error:
+        return error
 
-    data = request.json or {}
-    username = data.get("username")
-    password = data.get("password")
+    credentials, error = require_username_password(
+        data,
+        error_message="Username and password are required",
+        status_code=400,
+    )
+    if error:
+        return error
+    username, password = credentials
     role = data.get("role", "student")
-
-    if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
 
     pwd_error = password_error(password)
     if pwd_error:
         return jsonify({"error": pwd_error}), 400
 
-    users = load_users()
-    if username in users:
+    error_message = create_user(username, password, role)
+    if error_message:
         logger.info("Signup failed: username exists (%s)", username)
-        return jsonify({"error": "Username already exists"}), 400
-
-    hashed_password = bcrypt.hashpw(
-        password.encode("utf-8"),
-        bcrypt.gensalt(),
-    ).decode("utf-8")
-
-    users[username] = {"password": hashed_password, "role": role}
-    save_users(users)
+        return jsonify({"error": error_message}), 400
 
     logger.info("Signup success: %s (%s)", username, role)
     return jsonify({"message": "User registered successfully"}), 201
@@ -51,16 +47,19 @@ def signup():
 @auth_bp.route("/login", methods=["POST"])
 def login():
     """Handle user login and certificate generation."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
+    data, error = get_json_body()
+    if error:
+        return error
 
-    data = request.json or {}
-    username = data.get("username")
-    password = data.get("password")
-
-    if not username or not password:
+    credentials, error = require_username_password(
+        data,
+        error_message="Invalid username or password",
+        status_code=401,
+    )
+    if error:
         logger.info("Login failed: missing credentials")
-        return jsonify({"error": "Invalid username or password"}), 401
+        return error
+    username, password = credentials
 
     users = load_users()
     if username not in users:

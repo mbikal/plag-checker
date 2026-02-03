@@ -7,7 +7,7 @@ import os
 from flask import Blueprint, jsonify, request
 
 from backend import config
-from backend.security import verify_teacher
+from backend.request_utils import get_json_body, require_teacher
 
 teacher_bp = Blueprint("teacher", __name__)
 
@@ -15,15 +15,12 @@ teacher_bp = Blueprint("teacher", __name__)
 @teacher_bp.route("/teacher/uploads", methods=["POST"])
 def teacher_uploads():
     """Return list of uploaded scan PDFs for teachers."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    username = data.get("username")
-    password = data.get("password")
-    if not username or not password:
-        return jsonify({"error": "Credentials required"}), 401
-    if not verify_teacher(username, password):
-        return jsonify({"error": "Unauthorized"}), 401
+    data, error = get_json_body()
+    if error:
+        return error
+    _, error = require_teacher(data)
+    if error:
+        return error
 
     uploads = []
     for name in sorted(os.listdir(config.UPLOAD_DIR)):

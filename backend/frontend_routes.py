@@ -1,17 +1,18 @@
 """Frontend serving routes."""
 from __future__ import annotations
 
-import importlib.resources as resources
 import os
+from functools import lru_cache
+from importlib import resources
 
 from flask import Blueprint, jsonify, send_from_directory
 
 from backend import config
 
 frontend_bp = Blueprint("frontend", __name__)
-_frontend_dist = None
 
 
+@lru_cache(maxsize=1)
 def _resolve_frontend_dist() -> str:
     local_dist = config.FRONTEND_DIST
     if os.path.isdir(local_dist):
@@ -29,11 +30,9 @@ def _resolve_frontend_dist() -> str:
 @frontend_bp.route("/<path:path>")
 def serve_frontend(path: str):
     """Serve the built frontend application."""
-    global _frontend_dist
-    if _frontend_dist is None:
-        _frontend_dist = _resolve_frontend_dist()
-    if not os.path.isdir(_frontend_dist):
+    frontend_dist = _resolve_frontend_dist()
+    if not os.path.isdir(frontend_dist):
         return jsonify({"error": "Frontend build not found"}), 404
-    if path and os.path.exists(os.path.join(_frontend_dist, path)):
-        return send_from_directory(_frontend_dist, path)
-    return send_from_directory(_frontend_dist, "index.html")
+    if path and os.path.exists(os.path.join(frontend_dist, path)):
+        return send_from_directory(frontend_dist, path)
+    return send_from_directory(frontend_dist, "index.html")

@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import os
 
-import bcrypt
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
 from backend import config
 from backend.logging_config import get_logger
+from backend.request_utils import get_json_body, require_admin, require_username_password
 from backend.security import password_error, verify_admin
-from backend.users import load_users, save_users
+from backend.users import create_user, load_users, save_users, update_user_password
 
 admin_bp = Blueprint("admin", __name__)
 logger = get_logger()
@@ -31,35 +31,28 @@ def admin_logs():
 @admin_bp.route("/admin/teacher", methods=["POST"])
 def admin_create_teacher():
     """Create a teacher account (admin only)."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
-    username = data.get("username")
-    password = data.get("password")
-
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
-    if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
+    data, error = get_json_body()
+    if error:
+        return error
+    admin_username, error = require_admin(data)
+    if error:
+        return error
+    credentials, error = require_username_password(
+        data,
+        error_message="Username and password are required",
+        status_code=400,
+    )
+    if error:
+        return error
+    username, password = credentials
 
     pwd_error = password_error(password)
     if pwd_error:
         return jsonify({"error": pwd_error}), 400
 
-    users = load_users()
-    if username in users:
-        return jsonify({"error": "Username already exists"}), 400
-
-    hashed_password = bcrypt.hashpw(
-        password.encode("utf-8"),
-        bcrypt.gensalt(),
-    ).decode("utf-8")
-    users[username] = {"password": hashed_password, "role": "teacher"}
-    save_users(users)
+    error_message = create_user(username, password, "teacher")
+    if error_message:
+        return jsonify({"error": error_message}), 400
     logger.info("Admin created teacher: %s by %s", username, admin_username)
     return jsonify({"message": "Teacher account created"}), 201
 
@@ -67,15 +60,12 @@ def admin_create_teacher():
 @admin_bp.route("/admin/uploads", methods=["POST"])
 def admin_uploads():
     """Return list of uploaded scan PDFs (admin only)."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
+    data, error = get_json_body()
+    if error:
+        return error
+    admin_username, error = require_admin(data)
+    if error:
+        return error
 
     uploads = []
     for name in sorted(os.listdir(config.UPLOAD_DIR)):
@@ -92,15 +82,12 @@ def admin_uploads():
 @admin_bp.route("/admin/users", methods=["POST"])
 def admin_users():
     """List users for admin control."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
+    data, error = get_json_body()
+    if error:
+        return error
+    _, error = require_admin(data)
+    if error:
+        return error
 
     users = load_users()
     payload = [
@@ -113,17 +100,14 @@ def admin_users():
 @admin_bp.route("/admin/users/role", methods=["POST"])
 def admin_update_role():
     """Update a user's role (admin only)."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
+    data, error = get_json_body()
+    if error:
+        return error
+    admin_username, error = require_admin(data)
+    if error:
+        return error
     username = data.get("username")
     role = data.get("role")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
     if not username or not role:
         return jsonify({"error": "Username and role are required"}), 400
     if role not in {"student", "teacher", "admin"}:
@@ -141,16 +125,13 @@ def admin_update_role():
 @admin_bp.route("/admin/users/delete", methods=["POST"])
 def admin_delete_user():
     """Delete a user account (admin only)."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
+    data, error = get_json_body()
+    if error:
+        return error
+    admin_username, error = require_admin(data)
+    if error:
+        return error
     username = data.get("username")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
     if not username:
         return jsonify({"error": "Username required"}), 400
     if username == admin_username:
@@ -168,34 +149,28 @@ def admin_delete_user():
 @admin_bp.route("/admin/users/reset", methods=["POST"])
 def admin_reset_password():
     """Reset a user's password (admin only)."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
-    username = data.get("username")
-    password = data.get("password")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
-    if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
+    data, error = get_json_body()
+    if error:
+        return error
+    admin_username, error = require_admin(data)
+    if error:
+        return error
+    credentials, error = require_username_password(
+        data,
+        error_message="Username and password are required",
+        status_code=400,
+    )
+    if error:
+        return error
+    username, password = credentials
 
     pwd_error = password_error(password)
     if pwd_error:
         return jsonify({"error": pwd_error}), 400
 
-    users = load_users()
-    if username not in users:
-        return jsonify({"error": "User not found"}), 404
-
-    hashed_password = bcrypt.hashpw(
-        password.encode("utf-8"),
-        bcrypt.gensalt(),
-    ).decode("utf-8")
-    users[username]["password"] = hashed_password
-    save_users(users)
+    error_message = update_user_password(username, password)
+    if error_message:
+        return jsonify({"error": error_message}), 404
     logger.info("Admin reset password: %s by %s", username, admin_username)
     return jsonify({"message": "Password reset"})
 
@@ -203,15 +178,12 @@ def admin_reset_password():
 @admin_bp.route("/admin/corpus/list", methods=["POST"])
 def admin_corpus_list():
     """List corpus files (admin only)."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
+    data, error = get_json_body()
+    if error:
+        return error
+    _, error = require_admin(data)
+    if error:
+        return error
 
     files = sorted(
         name for name in os.listdir(config.CORPUS_DIR)
@@ -250,16 +222,13 @@ def admin_corpus_upload():
 @admin_bp.route("/admin/corpus/delete", methods=["POST"])
 def admin_corpus_delete():
     """Delete a corpus PDF (admin only)."""
-    if not request.is_json:
-        return jsonify({"error": "JSON body required"}), 400
-    data = request.json or {}
-    admin_username = data.get("admin_username")
-    admin_password = data.get("admin_password")
+    data, error = get_json_body()
+    if error:
+        return error
+    admin_username, error = require_admin(data)
+    if error:
+        return error
     filename = data.get("filename")
-    if not admin_username or not admin_password:
-        return jsonify({"error": "Admin credentials required"}), 401
-    if not verify_admin(admin_username, admin_password):
-        return jsonify({"error": "Unauthorized"}), 401
     if not filename:
         return jsonify({"error": "Filename required"}), 400
     if not filename.lower().endswith(".pdf"):
