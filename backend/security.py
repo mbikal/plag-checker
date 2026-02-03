@@ -10,6 +10,8 @@ from backend.users import load_users
 
 def password_error(password: str) -> str | None:
     """Return a validation error message for invalid passwords."""
+    if not isinstance(password, str):
+        return "Password must be a string"
     if len(password) < 8:
         return "Password must be at least 8 characters long"
     if not re.search(r"[A-Z]", password):

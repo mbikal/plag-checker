@@ -63,13 +63,13 @@ def test_ensure_keypair_idempotent(tmp_path: Path) -> None:
     """Ensure keypair creation is idempotent."""
     os.environ["PLAG_KEYSTORE_PASSWORD"] = "test-password"
     key_dir = tmp_path / "keys"
-    private_path, public_path = ensure_keypair(key_dir=key_dir)
-    private_path_2, public_path_2 = ensure_keypair(key_dir=key_dir)
+    keystore_path, public_key = ensure_keypair(key_dir=key_dir)
+    keystore_path_2, public_key_2 = ensure_keypair(key_dir=key_dir)
 
-    assert private_path == private_path_2
-    assert public_path == public_path_2
-    assert private_path.exists()
-    assert public_path.exists()
+    assert keystore_path == keystore_path_2
+    assert public_key == public_key_2
+    assert keystore_path.exists()
+    assert public_key
 
 
 if __name__ == "__main__":
