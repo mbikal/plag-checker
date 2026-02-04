@@ -113,8 +113,12 @@ def verify_certificate(cert_bytes: bytes, username: str, role: str) -> str | Non
     except ValueError:
         return "Invalid certificate format"
 
-    if cert.issuer != ca_cert.subject:
-        return "Certificate issuer mismatch"
+    checks = [
+        (
+            cert.issuer == ca_cert.subject,
+            "Certificate issuer mismatch",
+        ),
+    ]
 
     try:
         ca_cert.public_key().verify(
@@ -123,20 +127,38 @@ def verify_certificate(cert_bytes: bytes, username: str, role: str) -> str | Non
             padding.PKCS1v15(),
             cert.signature_hash_algorithm,
         )
+        signature_ok = True
     except Exception:  # pylint: disable=broad-except
-        return "Certificate signature invalid"
+        signature_ok = False
+    checks.append((signature_ok, "Certificate signature invalid"))
 
     now = datetime.utcnow()
-    if cert.not_valid_before > now or cert.not_valid_after < now:
-        return "Certificate is expired or not yet valid"
+    checks.append(
+        (
+            cert.not_valid_before <= now <= cert.not_valid_after,
+            "Certificate is expired or not yet valid",
+        )
+    )
 
     subject = cert.subject
     common_names = subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-    if not common_names or common_names[0].value != username:
-        return "Certificate username mismatch"
+    checks.append(
+        (
+            bool(common_names) and common_names[0].value == username,
+            "Certificate username mismatch",
+        )
+    )
 
     org_units = subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
-    if role and (not org_units or org_units[0].value != role):
-        return "Certificate role mismatch"
+    if role:
+        checks.append(
+            (
+                bool(org_units) and org_units[0].value == role,
+                "Certificate role mismatch",
+            )
+        )
 
+    for ok, message in checks:
+        if not ok:
+            return message
     return None

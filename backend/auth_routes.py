@@ -23,10 +23,25 @@ def signup():
     username = request.form.get("username")
     password = request.form.get("password")
     role = request.form.get("role", "student")
+    cert_file = request.files.get("certificate")
+
+    error = _validate_signup_form(username, password, role, cert_file)
+    if error:
+        return error
+
+    error_message = create_user(username, password, role)
+    if error_message:
+        logger.info("Signup failed: username exists (%s)", username)
+        return jsonify({"error": error_message}), 400
+
+    logger.info("Signup success: %s (%s)", username, role)
+    return jsonify({"message": "User registered successfully"}), 201
+
+
+def _validate_signup_form(username, password, role, cert_file):
+    """Validate signup form data and certificate."""
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
-
-    cert_file = request.files.get("certificate")
     if cert_file is None or not cert_file.filename:
         return jsonify({"error": "Certificate file is required"}), 400
 
@@ -38,14 +53,7 @@ def signup():
     pwd_error = password_error(password)
     if pwd_error:
         return jsonify({"error": pwd_error}), 400
-
-    error_message = create_user(username, password, role)
-    if error_message:
-        logger.info("Signup failed: username exists (%s)", username)
-        return jsonify({"error": error_message}), 400
-
-    logger.info("Signup success: %s (%s)", username, role)
-    return jsonify({"message": "User registered successfully"}), 201
+    return None
 
 
 @auth_bp.route("/login", methods=["POST"])

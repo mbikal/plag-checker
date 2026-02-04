@@ -16,6 +16,19 @@ from backend.ca import generate_certificate
 from backend.users import load_users
 
 
+def build_signup_payload(username: str, password: str, role: str = "student"):
+    """Build multipart signup payload with a certificate."""
+    cert_path = generate_certificate(username, role)
+    return {
+        "data": {
+            "username": username,
+            "password": password,
+            "role": role,
+        },
+        "file": cert_path,
+    }
+
+
 @pytest.fixture(name='test_client')
 def fixture_client():
     """Create a test client for the Flask app."""
@@ -76,20 +89,9 @@ class TestLoadUsers:
 class TestSignup:
     """Tests for the signup endpoint."""
 
-    def _signup_payload(self, username: str, password: str, role: str = "student"):
-        cert_path = generate_certificate(username, role)
-        return {
-            "data": {
-                "username": username,
-                "password": password,
-                "role": role,
-            },
-            "file": cert_path,
-        }
-
     def test_signup_success(self, test_client, users_file):  # pylint: disable=unused-argument
         """Test successful user registration."""
-        payload = self._signup_payload("newuser", "Password123!", "student")
+        payload = build_signup_payload("newuser", "Password123!", "student")
         with open(payload["file"], "rb") as cert_handle:
             response = test_client.post(
                 "/signup",
@@ -105,7 +107,7 @@ class TestSignup:
 
     def test_signup_missing_username(self, test_client):
         """Test signup with missing username."""
-        payload = self._signup_payload("missinguser", "password123", "student")
+        payload = build_signup_payload("missinguser", "password123", "student")
         with open(payload["file"], "rb") as cert_handle:
             response = test_client.post(
                 "/signup",
@@ -122,7 +124,7 @@ class TestSignup:
 
     def test_signup_missing_password(self, test_client):
         """Test signup with missing password."""
-        payload = self._signup_payload("testuser", "Password123!", "student")
+        payload = build_signup_payload("testuser", "Password123!", "student")
         with open(payload["file"], "rb") as cert_handle:
             response = test_client.post(
                 "/signup",
@@ -153,7 +155,7 @@ class TestSignup:
 
     def test_signup_duplicate_username(self, test_client, users_file):  # pylint: disable=unused-argument
         """Test signup with duplicate username."""
-        payload = self._signup_payload("duplicate", "Password123!", "student")
+        payload = build_signup_payload("duplicate", "Password123!", "student")
         with open(payload["file"], "rb") as cert_handle:
             test_client.post(
                 "/signup",
@@ -164,7 +166,7 @@ class TestSignup:
                 content_type="multipart/form-data",
             )
 
-        payload = self._signup_payload("duplicate", "Password456!", "student")
+        payload = build_signup_payload("duplicate", "Password456!", "student")
         with open(payload["file"], "rb") as cert_handle:
             response = test_client.post(
                 "/signup",
@@ -185,7 +187,7 @@ class TestLogin:
     @pytest.fixture(name='user')
     def fixture_registered_user(self, test_client, users_file):  # pylint: disable=unused-argument
         """Create a registered user for login tests."""
-        payload = TestSignup()._signup_payload("testuser", "Testpass123!", "student")
+        payload = build_signup_payload("testuser", "Testpass123!", "student")
         with open(payload["file"], "rb") as cert_handle:
             test_client.post(
                 "/signup",
@@ -242,7 +244,7 @@ class TestCors:
 
     def test_cors_headers_present(self, test_client):
         """CORS headers should be present on API responses."""
-        payload = TestSignup()._signup_payload("corsuser", "Password123!", "student")
+        payload = build_signup_payload("corsuser", "Password123!", "student")
         with open(payload["file"], "rb") as cert_handle:
             response = test_client.post(
                 "/signup",
