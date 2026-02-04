@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.x509.oid import NameOID
 
 from backend import config
@@ -98,3 +98,45 @@ def generate_certificate(username: str, role: str) -> str:
         )
 
     return cert_path
+
+
+def verify_certificate(cert_bytes: bytes, username: str, role: str) -> str | None:
+    """Validate a user certificate against the local CA."""
+    ca_cert_path = os.path.join(config.CA_DIR, "ca.crt")
+    if not os.path.exists(ca_cert_path):
+        return "CA certificate not found"
+    with open(ca_cert_path, "rb") as ca_handle:
+        ca_cert = x509.load_pem_x509_certificate(ca_handle.read())
+
+    try:
+        cert = x509.load_pem_x509_certificate(cert_bytes)
+    except ValueError:
+        return "Invalid certificate format"
+
+    if cert.issuer != ca_cert.subject:
+        return "Certificate issuer mismatch"
+
+    try:
+        ca_cert.public_key().verify(
+            cert.signature,
+            cert.tbs_certificate_bytes,
+            padding.PKCS1v15(),
+            cert.signature_hash_algorithm,
+        )
+    except Exception:  # pylint: disable=broad-except
+        return "Certificate signature invalid"
+
+    now = datetime.utcnow()
+    if cert.not_valid_before > now or cert.not_valid_after < now:
+        return "Certificate is expired or not yet valid"
+
+    subject = cert.subject
+    common_names = subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+    if not common_names or common_names[0].value != username:
+        return "Certificate username mismatch"
+
+    org_units = subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
+    if role and (not org_units or org_units[0].value != role):
+        return "Certificate role mismatch"
+
+    return None

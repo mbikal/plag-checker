@@ -76,55 +76,104 @@ class TestLoadUsers:
 class TestSignup:
     """Tests for the signup endpoint."""
 
+    def _signup_payload(self, username: str, password: str, role: str = "student"):
+        cert_path = generate_certificate(username, role)
+        return {
+            "data": {
+                "username": username,
+                "password": password,
+                "role": role,
+            },
+            "file": cert_path,
+        }
+
     def test_signup_success(self, test_client, users_file):  # pylint: disable=unused-argument
         """Test successful user registration."""
-        response = test_client.post('/signup', json={
-            'username': 'newuser',
-            'password': 'Password123!',
-            'role': 'student'
-        })
+        payload = self._signup_payload("newuser", "Password123!", "student")
+        with open(payload["file"], "rb") as cert_handle:
+            response = test_client.post(
+                "/signup",
+                data={
+                    **payload["data"],
+                    "certificate": cert_handle,
+                },
+                content_type="multipart/form-data",
+            )
         assert response.status_code == 201
         data = json.loads(response.data)
         assert data['message'] == 'User registered successfully'
 
     def test_signup_missing_username(self, test_client):
         """Test signup with missing username."""
-        response = test_client.post('/signup', json={
-            'password': 'password123'
-        })
+        payload = self._signup_payload("missinguser", "password123", "student")
+        with open(payload["file"], "rb") as cert_handle:
+            response = test_client.post(
+                "/signup",
+                data={
+                    "password": "password123",
+                    "role": "student",
+                    "certificate": cert_handle,
+                },
+                content_type="multipart/form-data",
+            )
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
 
     def test_signup_missing_password(self, test_client):
         """Test signup with missing password."""
-        response = test_client.post('/signup', json={
-            'username': 'testuser'
-        })
+        payload = self._signup_payload("testuser", "Password123!", "student")
+        with open(payload["file"], "rb") as cert_handle:
+            response = test_client.post(
+                "/signup",
+                data={
+                    "username": "testuser",
+                    "role": "student",
+                    "certificate": cert_handle,
+                },
+                content_type="multipart/form-data",
+            )
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
 
     def test_signup_requires_json(self, test_client):
-        """Test signup with non-JSON body."""
-        response = test_client.post('/signup', data='username=testuser')
+        """Test signup without certificate."""
+        response = test_client.post(
+            "/signup",
+            data={
+                "username": "testuser",
+                "password": "Password123!",
+            },
+            content_type="multipart/form-data",
+        )
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
 
     def test_signup_duplicate_username(self, test_client, users_file):  # pylint: disable=unused-argument
         """Test signup with duplicate username."""
-        # First signup
-        test_client.post('/signup', json={
-            'username': 'duplicate',
-            'password': 'Password123!'
-        })
+        payload = self._signup_payload("duplicate", "Password123!", "student")
+        with open(payload["file"], "rb") as cert_handle:
+            test_client.post(
+                "/signup",
+                data={
+                    **payload["data"],
+                    "certificate": cert_handle,
+                },
+                content_type="multipart/form-data",
+            )
 
-        # Second signup with same username
-        response = test_client.post('/signup', json={
-            'username': 'duplicate',
-            'password': 'Password456!'
-        })
+        payload = self._signup_payload("duplicate", "Password456!", "student")
+        with open(payload["file"], "rb") as cert_handle:
+            response = test_client.post(
+                "/signup",
+                data={
+                    **payload["data"],
+                    "certificate": cert_handle,
+                },
+                content_type="multipart/form-data",
+            )
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'already exists' in data['error']
@@ -136,11 +185,16 @@ class TestLogin:
     @pytest.fixture(name='user')
     def fixture_registered_user(self, test_client, users_file):  # pylint: disable=unused-argument
         """Create a registered user for login tests."""
-        test_client.post('/signup', json={
-            'username': 'testuser',
-            'password': 'Testpass123!',
-            'role': 'student'
-        })
+        payload = TestSignup()._signup_payload("testuser", "Testpass123!", "student")
+        with open(payload["file"], "rb") as cert_handle:
+            test_client.post(
+                "/signup",
+                data={
+                    **payload["data"],
+                    "certificate": cert_handle,
+                },
+                content_type="multipart/form-data",
+            )
         return {'username': 'testuser', 'password': 'Testpass123!'}
 
     def test_login_success(self, test_client, user):
@@ -188,11 +242,16 @@ class TestCors:
 
     def test_cors_headers_present(self, test_client):
         """CORS headers should be present on API responses."""
-        response = test_client.post('/signup', json={
-            'username': 'corsuser',
-            'password': 'password123',
-            'role': 'student'
-        })
+        payload = TestSignup()._signup_payload("corsuser", "Password123!", "student")
+        with open(payload["file"], "rb") as cert_handle:
+            response = test_client.post(
+                "/signup",
+                data={
+                    **payload["data"],
+                    "certificate": cert_handle,
+                },
+                content_type="multipart/form-data",
+            )
         assert response.headers.get('Access-Control-Allow-Origin') == '*'
 
     def test_options_preflight(self, test_client):
