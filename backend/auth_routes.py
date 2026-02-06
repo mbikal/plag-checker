@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import bcrypt
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from backend.ca import generate_certificate
 from backend.logging_config import get_logger

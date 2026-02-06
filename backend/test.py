@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # pylint: disable=wrong-import-position,import-error
 from backend.app import create_app
+from backend.ca import generate_certificate
 from backend.users import load_users
 
 
