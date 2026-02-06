@@ -19,7 +19,6 @@ function AuthPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [certificate, setCertificate] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<AuthResponse | null>(null)
 
@@ -42,11 +41,6 @@ function AuthPage() {
       return
     }
     if (mode === 'signup') {
-      if (!certificate) {
-        setResponse({ error: 'Certificate file is required.' })
-        setLoading(false)
-        return
-      }
       if (password.length < 8) {
         setResponse({ error: 'Password must be at least 8 characters long.' })
         setLoading(false)
@@ -76,26 +70,15 @@ function AuthPage() {
 
     try {
       const endpoint = mode === 'login' ? 'login' : 'signup'
-      const res =
-        mode === 'login'
-          ? await fetch(`${apiBase}/${endpoint}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username, password }),
-            })
-          : await fetch(`${apiBase}/${endpoint}`, {
-              method: 'POST',
-              body: (() => {
-                const form = new FormData()
-                form.append('username', username)
-                form.append('password', password)
-                form.append('role', 'student')
-                if (certificate) {
-                  form.append('certificate', certificate)
-                }
-                return form
-              })(),
-            })
+      const res = await fetch(`${apiBase}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          ...(mode === 'signup' ? { role: 'student' } : {}),
+        }),
+      })
       const data = (await res.json()) as AuthResponse
       setResponse(data)
       if (mode === 'login' && !data.error) {
@@ -178,7 +161,6 @@ function AuthPage() {
               onClick={() => {
                 setMode('signup')
                 resetFeedback()
-                setCertificate(null)
               }}
             >
               Sign up
@@ -216,15 +198,6 @@ function AuthPage() {
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     placeholder="••••••••"
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>Certificate (.crt)</span>
-                  <input
-                    type="file"
-                    accept=".crt"
-                    onChange={(event) => setCertificate(event.target.files?.[0] || null)}
                     required
                   />
                 </label>

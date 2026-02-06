@@ -40,6 +40,31 @@ Plag Checker is a web application that helps detect plagiarism in PDF documents.
 ## Technologies used
 - React frontend (Vite)
 - Python backend (Flask)
+- Cryptography:
+  - RSA key generation/sign/verify (`rsa.generate_private_key`, `ca_key.sign`, `public_key.verify`)
+  - Ed25519 report signing (`Ed25519PrivateKey.generate`, `private_key.sign`)
+  - PKCS#12 keystore (`pkcs12.serialize_key_and_certificates`, `pkcs12.load_key_and_certificates`)
+  - AES‑GCM hybrid encryption (`AESGCM.encrypt`, `AESGCM.decrypt`)
+  - Password hashing (`bcrypt.hashpw`, `bcrypt.checkpw`)
+- PDF processing: `pdfplumber`, `PyPDF2`, `reportlab`
+- CI/CD: GitHub Actions
+- Containerization: Docker, Docker Compose
+
+## Repo structure
+```
+backend/            Flask backend (auth, admin, scan, crypto, config)
+frontend/           React frontend (Vite app)
+plag_system/        Plagiarism engine + crypto helpers
+uploads/            Encrypted scan outputs
+plag_system/corpus/ Encrypted corpus PDFs
+keys/               Master encryption key + signing keystore
+ca/                 CA private key + cert
+certs/              User certificates
+README.md
+Dockerfile
+docker-compose.yml
+requirements.txt
+```
 
 ## Installation and setup instructions
 1. Clone the repository and enter the project directory.

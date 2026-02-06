@@ -4,7 +4,7 @@ from __future__ import annotations
 import bcrypt
 from flask import Blueprint, jsonify, request
 
-from backend.ca import generate_certificate, verify_certificate
+from backend.ca import generate_certificate
 from backend.logging_config import get_logger
 from backend.request_utils import get_json_body, require_username_password_or_error
 from backend.security import password_error
@@ -17,43 +17,33 @@ logger = get_logger()
 @auth_bp.route("/signup", methods=["POST"])
 def signup():
     """Handle user registration."""
-    if request.is_json:
-        return jsonify({"error": "Certificate file required for signup"}), 400
-
-    username = request.form.get("username")
-    password = request.form.get("password")
-    role = request.form.get("role", "student")
-    cert_file = request.files.get("certificate")
-
-    error = _validate_signup_form(username, password, role, cert_file)
+    data, error = get_json_body()
     if error:
         return error
+
+    credentials = require_username_password_or_error(
+        data,
+        error_message="Username and password are required",
+        status_code=400,
+    )
+    if isinstance(credentials, tuple) and len(credentials) == 2:
+        username, password = credentials
+    else:
+        return credentials
+    role = data.get("role", "student")
+
+    pwd_error = password_error(password)
+    if pwd_error:
+        return jsonify({"error": pwd_error}), 400
 
     error_message = create_user(username, password, role)
     if error_message:
         logger.info("Signup failed: username exists (%s)", username)
         return jsonify({"error": error_message}), 400
 
+    cert_path = generate_certificate(username, role)
     logger.info("Signup success: %s (%s)", username, role)
-    return jsonify({"message": "User registered successfully"}), 201
-
-
-def _validate_signup_form(username, password, role, cert_file):
-    """Validate signup form data and certificate."""
-    if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
-    if cert_file is None or not cert_file.filename:
-        return jsonify({"error": "Certificate file is required"}), 400
-
-    cert_bytes = cert_file.read()
-    cert_error = verify_certificate(cert_bytes, username, role)
-    if cert_error:
-        return jsonify({"error": cert_error}), 400
-
-    pwd_error = password_error(password)
-    if pwd_error:
-        return jsonify({"error": pwd_error}), 400
-    return None
+    return jsonify({"message": "User registered successfully", "certificate_path": cert_path}), 201
 
 
 @auth_bp.route("/login", methods=["POST"])
